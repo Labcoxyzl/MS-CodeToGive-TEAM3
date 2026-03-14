@@ -50,3 +50,69 @@ from app.core.auth import CurrentUser
 async def me(user: CurrentUser):
     return {"user_id": user["sub"]}
 ```
+
+## Auth API — cURL Tests                                                                                            
+                                                                                                                      
+  ### Sign Up (minimal)
+  ```bash                                                                                                             
+  curl -s -X POST http://localhost:8000/api/v1/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{                                                                                                             
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "password": "password123"
+    }'
+
+  Sign Up (full)
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "John Doe",
+      "email": "john@example.com",
+      "password": "password123",
+      "phone": "555-867-5309",
+      "category": "corporate",
+      "languages": ["en", "es"],
+      "referral_source": "friend",
+      "referral_code": "abc12345"
+    }'
+
+  Sign Up — duplicate email (expect 409)
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "password": "password123"
+    }'
+
+  Log In (valid credentials)
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{
+      "email": "jane@example.com",
+      "password": "password123"
+    }'
+
+  Log In — wrong password (expect 401)
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{
+      "email": "jane@example.com",
+      "password": "wrongpassword"
+    }'
+
+  Log Out (requires access token from login)
+
+  TOKEN="<paste access_token from login response>"
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/logout \
+    -H "Authorization: Bearer $TOKEN"
+
+  Log Out — no token (expect 403)
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/logout
