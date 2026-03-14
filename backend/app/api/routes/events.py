@@ -28,6 +28,8 @@ class EventCreate(BaseModel):
     longitude: float | None = None
     volunteer_limit: int | None = None
     pantry_mode: Literal["none", "closest_pantries", "single_venue"] = "none"
+    pantry_count: int | None = None       # used when pantry_mode = "closest_pantries"
+    pantry_venue_id: str | None = None    # used when pantry_mode = "single_venue"
     flyer_language: Literal["en", "es"] = "en"
 
 
