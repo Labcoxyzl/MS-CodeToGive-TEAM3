@@ -2,7 +2,7 @@
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict
 
 from app.core.auth import CurrentUser
@@ -79,6 +79,31 @@ class EventResponse(BaseModel):
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
+
+# List all public events with optional filters for status, date range, and pagination
+@router.get("/", response_model=list[EventResponse])
+async def list_events(
+    status_filter: str | None = Query(default=None, alias="status"),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    query = get_supabase_admin().table("events").select("*").eq("visibility", "public")
+
+    if status_filter:
+        query = query.eq("status", status_filter)
+    if date_from:
+        query = query.gte("date", date_from)
+    if date_to:
+        query = query.lte("date", date_to)
+
+    offset = (page - 1) * limit
+    query = query.range(offset, offset + limit - 1)
+
+    result = query.execute()
+    return result.data
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=EventResponse)
 async def create_event(body: EventCreate, current_user: CurrentUser):
