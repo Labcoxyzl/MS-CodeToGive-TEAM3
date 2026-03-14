@@ -128,14 +128,16 @@ async def update_event(event_id: str, body: EventUpdate, current_user: CurrentUs
     return updated.data[0]
 
 
-# Delete an event — only the event leader can delete it
-@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_event(event_id: str, current_user: CurrentUser):
+# Cancel an event (soft delete) — only the event leader can cancel it
+@router.delete("/{event_id}")
+async def cancel_event(event_id: str, current_user: CurrentUser):
     result = get_supabase_admin().table("events").select("id, event_leader_id").eq("id", event_id).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Event not found")
 
     if result.data[0]["event_leader_id"] != current_user["sub"]:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this event")
+        raise HTTPException(status_code=403, detail="Not authorized to cancel this event")
 
-    get_supabase_admin().table("events").delete().eq("id", event_id).execute()
+    get_supabase_admin().table("events").update({"status": "cancelled"}).eq("id", event_id).execute()
+
+    return {"success": True}
