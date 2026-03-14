@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     supabase_anon_key: str
     supabase_service_role_key: str
 
+    # Frontend
+    frontend_url: str = "http://localhost:3000"
+
     # JWT (used when verifying Supabase JWTs or issuing your own)
     secret_key: str
     supabase_jwt_secret: str
