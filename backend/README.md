@@ -3,7 +3,7 @@
 ## Setup
 
 (Would suggest at least Python 3.11)
-```bash
+```zsh
 cd backend
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
@@ -12,13 +12,13 @@ pip install -r requirements.txt
 
 Copy the root `.env.example` to `.env` and fill in your values:
 
-```bash
+```zsh
 cp ../.env.example ../.env
 ```
 
 ## Run
 
-```bash
+```zsh
 uvicorn app.main:app --reload
 ```
 
@@ -54,7 +54,7 @@ async def me(user: CurrentUser):
 ## Auth API — cURL Tests                                                                                            
                                                                                                                       
   ### Sign Up (minimal)
-  ```bash                                                                                                             
+  ```zsh                                                                                                             
   curl -s -X POST http://localhost:8000/api/v1/auth/signup \
     -H "Content-Type: application/json" \
     -d '{                                                                                                             
@@ -116,3 +116,22 @@ async def me(user: CurrentUser):
   Log Out — no token (expect 403)
 
   curl -s -X POST http://localhost:8000/api/v1/auth/logout
+
+## Events API — cURL Tests
+
+### Create event
+
+curl -s -X POST http://localhost:8000/api/v1/events/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "title": "Mission District Outreach",
+    "description": "Help distribute food pantry flyers.",
+    "date": "2026-04-20",
+    "start_time": "10:00:00",
+    "end_time": "13:00:00",
+    "location_name": "Mission Dolores Park",
+    "latitude": 37.7599,
+    "longitude": -122.4148,
+    "volunteer_limit": 10
+  }'
