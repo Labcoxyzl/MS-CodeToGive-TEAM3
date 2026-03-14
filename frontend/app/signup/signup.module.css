@@ -1,0 +1,60 @@
+.signupWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  padding-bottom: 40px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 500px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Language multi-select ─────────────────────────────────── */
+.languageSelect {
+  position: relative;
+}
+
+.languageDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: #fff;
+  border: 1.5px solid var(--lt-border);
+  border-radius: var(--lt-radius-sm);
+  box-shadow: var(--lt-shadow-elevated);
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.languageOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.languageOption:hover {
+  background: var(--lt-card-bg-muted);
+}
+
+.languageOption input[type="checkbox"] {
+  accent-color: var(--lt-teal);
+  width: 16px;
+  height: 16px;
+}

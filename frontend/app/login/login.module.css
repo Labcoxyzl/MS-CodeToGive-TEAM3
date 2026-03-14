@@ -1,0 +1,16 @@
+.loginWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  padding-bottom: 40px;
+}
+
+.forgotLink {
+  display: block;
+  text-align: right;
+  font-size: 13px;
+  margin-top: -12px;
+  margin-bottom: 24px;
+}

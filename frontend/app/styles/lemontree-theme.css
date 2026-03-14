@@ -1,0 +1,361 @@
+/* ═══════════════════════════════════════════════════════════════
+   Lemontree Design System
+   Based on https://www.foodhelpline.org visual identity
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Brand Colors ────────────────────────────────────────── */
+  --lt-yellow: #FFC82E;
+  --lt-yellow-light: #FBE89A;
+  --lt-purple: #6B46C1;
+  --lt-purple-hover: #5A37A8;
+  --lt-purple-light: #EDE5F7;
+  --lt-teal: #2E8B7A;
+  --lt-teal-hover: #247060;
+  --lt-teal-light: #D3EFEA;
+  --lt-coral: #E86F51;
+
+  /* ── Neutral Palette ─────────────────────────────────────── */
+  --lt-bg: #FEF9E7;
+  --lt-card-bg: white;
+  --lt-card-bg-white: #FFFFFF;
+  --lt-card-bg-muted: #F5F3EF;
+  --lt-border: #E8E4DC;
+  --lt-border-focus: #2E8B7A;
+  --lt-text-primary: #2D2A26;
+  --lt-text-secondary: #6B6560;
+  --lt-text-muted: #9C9690;
+  --lt-error: #D63B2F;
+  --lt-error-bg: #FEF0EF;
+  --lt-success: #2E8B7A;
+
+  /* ── Sizing / Radius ─────────────────────────────────────── */
+  --lt-radius-sm: 8px;
+  --lt-radius-md: 14px;
+  --lt-radius-lg: 16px;
+  --lt-radius-full: 9999px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --lt-shadow-card: 0 1px 6px rgba(0, 0, 0, 0.04);
+  --lt-shadow-elevated: 0 8px 30px rgba(0, 0, 0, 0.10);
+
+  /* ── Transition ──────────────────────────────────────────── */
+  --lt-transition: 0.2s ease;
+}
+
+/* ── Base Reset (scoped to auth pages via class) ───────────── */
+.lt-page {
+  min-height: 100vh;
+  background-color: var(--lt-bg);
+  color: var(--lt-text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Header Bar ────────────────────────────────────────────── */
+.lt-header {
+  width: 100%;
+  background-color: var(--lt-yellow);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lt-header__logo {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--lt-text-primary);
+  text-decoration: none;
+  letter-spacing: -0.5px;
+}
+
+.lt-header__logo span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lt-header__logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #E86F51 40%, #2E8B7A 100%);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ── Card Container ────────────────────────────────────────── */
+.lt-card {
+  background: var(--lt-card-bg);
+  border-radius: var(--lt-radius-md);
+  box-shadow: var(--lt-shadow-card);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 40px;
+  width: 100%;
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+.lt-card--wide {
+  max-width: 560px;
+}
+
+.lt-card__title {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--lt-text-primary);
+  margin: 0 0 6px;
+}
+
+.lt-card__subtitle {
+  font-size: 15px;
+  color: var(--lt-text-secondary);
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+/* ── Form Elements ─────────────────────────────────────────── */
+.lt-form-group {
+  margin-bottom: 20px;
+}
+
+.lt-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lt-text-primary);
+  margin-bottom: 6px;
+}
+
+.lt-label__required {
+  color: var(--lt-error);
+  margin-left: 2px;
+}
+
+.lt-input,
+.lt-select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--lt-text-primary);
+  background: var(--lt-card-bg-white);
+  border: 1px solid var(--lt-border);
+  border-radius: var(--lt-radius-sm);
+  outline: none;
+  transition: border-color var(--lt-transition), box-shadow var(--lt-transition);
+  box-sizing: border-box;
+}
+
+.lt-input::placeholder {
+  color: var(--lt-text-muted);
+}
+
+.lt-input:focus,
+.lt-select:focus {
+  border-color: var(--lt-border-focus);
+  box-shadow: 0 0 0 3px var(--lt-teal-light);
+  background: var(--lt-card-bg-white);
+}
+
+.lt-input--error,
+.lt-select--error {
+  border-color: var(--lt-error);
+  background: var(--lt-error-bg);
+}
+
+.lt-input--error:focus,
+.lt-select--error:focus {
+  box-shadow: 0 0 0 3px rgba(214, 59, 47, 0.15);
+}
+
+.lt-error-text {
+  font-size: 13px;
+  color: var(--lt-error);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Select ────────────────────────────────────────────────── */
+.lt-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%236B6560' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.lt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: var(--lt-radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.lt-btn--primary {
+  background: var(--lt-teal);
+  color: #FFFFFF;
+  width: 100%;
+}
+
+.lt-btn--primary:hover {
+  background: var(--lt-teal-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(46, 139, 122, 0.30);
+}
+
+.lt-btn--primary:active {
+  transform: translateY(0);
+}
+
+.lt-btn--primary:disabled {
+  background: var(--lt-text-muted);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.lt-btn--outline {
+  background: transparent;
+  color: var(--lt-purple);
+  border: 1.5px solid var(--lt-purple);
+  width: 100%;
+}
+
+.lt-btn--outline:hover {
+  background: var(--lt-purple-light);
+}
+
+/* ── Divider ───────────────────────────────────────────────── */
+.lt-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+  color: var(--lt-text-muted);
+  font-size: 13px;
+}
+
+.lt-divider::before,
+.lt-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--lt-border);
+}
+
+/* ── Section Header (for sign-up form) ─────────────────────── */
+.lt-section-header {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--lt-teal);
+  margin: 28px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--lt-teal-light);
+}
+
+.lt-section-header:first-of-type {
+  margin-top: 0;
+}
+
+/* ── Links ─────────────────────────────────────────────────── */
+.lt-link {
+  color: var(--lt-teal);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--lt-transition);
+}
+
+.lt-link:hover {
+  color: var(--lt-teal-hover);
+  text-decoration: underline;
+}
+
+/* ── Footer Text ───────────────────────────────────────────── */
+.lt-footer-text {
+  text-align: center;
+  font-size: 14px;
+  color: var(--lt-text-secondary);
+  margin-top: 24px;
+}
+
+/* ── Loading Spinner ───────────────────────────────────────── */
+.lt-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: lt-spin 0.6s linear infinite;
+}
+
+@keyframes lt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .lt-card {
+    margin: 20px 16px;
+    padding: 28px 20px;
+  }
+}
+
+/* ── Multi-select tags ─────────────────────────────────────── */
+.lt-tags-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.lt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--lt-teal-light);
+  color: var(--lt-teal);
+  border-radius: var(--lt-radius-full);
+  cursor: default;
+}
+
+.lt-tag__remove {
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity var(--lt-transition);
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+  margin-left: 2px;
+}
+
+.lt-tag__remove:hover {
+  opacity: 1;
+}
