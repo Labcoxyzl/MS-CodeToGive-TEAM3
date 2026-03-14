@@ -3,30 +3,31 @@ single API rather than talking to Supabase directly."""
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from enum import Enum
+from typing import Optional
 from app.core.auth import CurrentUser
 from app.core.supabase import get_supabase_admin, get_supabase_client
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-class Role(Enum):
-    LEADER = 'Event leader'
-    PARTICIPANT = 'Event participant'
-    PROMOTER = 'Event promoter'
 
-class Organization(Enum):
-    CORPORATE = 'Corporate'
-    LEADERSHIP_GROUP = 'Leadership group'
-    STUDENT = 'student'
-    OTHER = 'other'
+class Category(str, Enum):
+    CORPORATE = "corporate"
+    LEADERSHIP_GROUP = "leadership_group"
+    STUDENT = "student"
+    COMMUNITY = "community"
+    OTHER = "other"
+
 
 class SignUpRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
-    phone: str
-    role: Role
-    organization: str
-    referral: str | None
+    phone: Optional[str] = None
+    category: Optional[Category] = None
+    languages: Optional[list[str]] = None
+    referral_source: Optional[str] = None
+    referral_code: Optional[str] = None  # code of the user who referred this person
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -47,11 +48,38 @@ async def sign_up(body: SignUpRequest):
         raise HTTPException(status_code=409, detail="An account with this email already exists")
 
     admin = get_supabase_admin()
-    admin.table("User").insert({
-        "Name": body.name,
-        "Email": body.email,
-        "Role": body.role.value,
-    }).execute()
+
+    # Resolve referral code to a user ID if provided
+    referred_by_user_id = None
+    if body.referral_code:
+        ref_result = (
+            admin.table("users")
+            .select("id")
+            .eq("referral_code", body.referral_code)
+            .maybe_single()
+            .execute()
+        )
+        if ref_result.data:
+            referred_by_user_id = ref_result.data["id"]
+
+    user_row: dict = {
+        "id": response.user.id,
+        "email": body.email,
+        "name": body.name,
+        "total_points": 0,
+    }
+    if body.phone is not None:
+        user_row["phone"] = body.phone
+    if body.category is not None:
+        user_row["category"] = body.category.value
+    if body.languages is not None:
+        user_row["languages"] = body.languages
+    if body.referral_source is not None:
+        user_row["referral_source"] = body.referral_source
+    if referred_by_user_id is not None:
+        user_row["referred_by_user_id"] = referred_by_user_id
+
+    admin.table("users").upsert(user_row).execute()
 
     return {"message": "Check your email to confirm your account", "user_id": response.user.id}
 
