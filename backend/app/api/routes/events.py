@@ -153,6 +153,42 @@ async def update_event(event_id: str, body: EventUpdate, current_user: CurrentUs
     return updated.data[0]
 
 
+# Get all events created by the current user, optionally filtered by status
+@router.get("/my/created", response_model=list[EventResponse])
+async def get_my_created_events(
+    current_user: CurrentUser,
+    status_filter: str | None = Query(default=None, alias="status"),
+):
+    query = get_supabase_admin().table("events").select("*").eq("event_leader_id", current_user["sub"])
+
+    if status_filter:
+        query = query.eq("status", status_filter)
+
+    result = query.execute()
+    return result.data
+
+
+# Get all events the current user has signed up for, optionally filtered by status
+@router.get("/my/joined", response_model=list[EventResponse])
+async def get_my_joined_events(
+    current_user: CurrentUser,
+    status_filter: str | None = Query(default=None, alias="status"),
+):
+    signups = get_supabase_admin().table("event_signups").select("event_id").eq("user_id", current_user["sub"]).neq("status", "cancelled").execute()
+
+    if not signups.data:
+        return []
+
+    event_ids = [s["event_id"] for s in signups.data]
+    query = get_supabase_admin().table("events").select("*").in_("id", event_ids)
+
+    if status_filter:
+        query = query.eq("status", status_filter)
+
+    result = query.execute()
+    return result.data
+
+
 # Cancel an event (soft delete) — only the event leader can cancel it
 @router.delete("/{event_id}")
 async def cancel_event(event_id: str, current_user: CurrentUser):
