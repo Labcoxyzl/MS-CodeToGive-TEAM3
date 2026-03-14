@@ -123,37 +123,6 @@ async def create_event(body: EventCreate, current_user: CurrentUser):
     return result.data[0]
 
 
-@router.get("/{event_id}", response_model=EventResponse)
-async def get_event(event_id: str):
-    result = get_supabase_admin().table("events").select("*").eq("id", event_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Event not found")
-
-    return result.data[0]
-
-
-@router.put("/{event_id}", response_model=EventResponse)
-async def update_event(event_id: str, body: EventUpdate, current_user: CurrentUser):
-    # Fetch existing event
-    result = get_supabase_admin().table("events").select("*").eq("id", event_id).execute()
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Event not found")
-
-    event = result.data[0]
-    if event["event_leader_id"] != current_user["sub"]:
-        raise HTTPException(status_code=403, detail="Not authorized to update this event")
-
-    update_data = body.model_dump(exclude_none=True)
-    if not update_data:
-        raise HTTPException(status_code=422, detail="No fields provided to update")
-
-    updated = get_supabase_admin().table("events").update(update_data).eq("id", event_id).execute()
-    if not updated.data:
-        raise HTTPException(status_code=500, detail="Failed to update event")
-
-    return updated.data[0]
-
-
 # Get all events created by the current user, optionally filtered by status
 @router.get("/my/created", response_model=list[EventResponse])
 async def get_my_created_events(
@@ -188,6 +157,37 @@ async def get_my_joined_events(
 
     result = query.execute()
     return result.data
+
+
+@router.get("/{event_id}", response_model=EventResponse)
+async def get_event(event_id: str):
+    result = get_supabase_admin().table("events").select("*").eq("id", event_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    return result.data[0]
+
+
+@router.put("/{event_id}", response_model=EventResponse)
+async def update_event(event_id: str, body: EventUpdate, current_user: CurrentUser):
+    # Fetch existing event
+    result = get_supabase_admin().table("events").select("*").eq("id", event_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    event = result.data[0]
+    if event["event_leader_id"] != current_user["sub"]:
+        raise HTTPException(status_code=403, detail="Not authorized to update this event")
+
+    update_data = body.model_dump(exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=422, detail="No fields provided to update")
+
+    updated = get_supabase_admin().table("events").update(update_data).eq("id", event_id).execute()
+    if not updated.data:
+        raise HTTPException(status_code=500, detail="Failed to update event")
+
+    return updated.data[0]
 
 
 # Get nearby food resources/pantries for an event using the Lemontree Data API
