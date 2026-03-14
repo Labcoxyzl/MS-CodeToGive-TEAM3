@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import InputField from "@/app/components/ui/InputField";
 import styles from "./login.module.css";
@@ -11,6 +12,23 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+
+  // Check if user is already logged in
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      router.push("/dashboard");
+    } else {
+      setIsAuthorized(true);
+    }
+  }, [router]);
+  
+  if (!isAuthorized) {
+    return null; // Wait for client-side auth check
+  }
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
