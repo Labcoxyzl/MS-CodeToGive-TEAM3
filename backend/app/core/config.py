@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # JWT (used when verifying Supabase JWTs or issuing your own)
     secret_key: str
+    supabase_jwt_secret: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
