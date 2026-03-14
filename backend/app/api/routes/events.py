@@ -191,8 +191,8 @@ async def update_event(event_id: str, body: EventUpdate, current_user: CurrentUs
 
 
 # Get nearby food resources/pantries for an event using the Lemontree Data API
-@router.get("/{event_id}/nearby-pantries")
-async def get_nearby_pantries(event_id: str, count: int = Query(default=4, ge=1, le=10)):
+@router.get("/{event_id}/nearby-resources")
+async def get_nearby_resources(event_id: str, count: int = Query(default=4, ge=1, le=10)):
     # Fetch the event to get its lat/lng
     result = get_supabase_admin().table("events").select("id, latitude, longitude").eq("id", event_id).execute()
     if not result.data:
