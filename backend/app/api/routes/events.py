@@ -27,9 +27,9 @@ class EventCreate(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     volunteer_limit: int | None = None
-    pantry_mode: Literal["none", "closest_pantries", "single_venue"] = "none"
-    pantry_count: int | None = None       # used when pantry_mode = "closest_pantries"
-    pantry_venue_id: str | None = None    # used when pantry_mode = "single_venue"
+    pantry_mode: Literal["none", "nearby_resources", "single_resource"] = "none"
+    resource_count: int | None = None     # used when pantry_mode = "nearby_resources"
+    resource_id: str | None = None        # Lemontree API resource ID for single_resource mode
     flyer_language: Literal["en", "es"] = "en"
 
 
@@ -45,9 +45,9 @@ class EventUpdate(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     volunteer_limit: int | None = None
-    pantry_mode: Literal["none", "closest_pantries", "single_venue"] | None = None
-    pantry_count: int | None = None
-    pantry_venue_id: str | None = None
+    pantry_mode: Literal["none", "nearby_resources", "single_resource"] | None = None
+    resource_count: int | None = None
+    resource_id: str | None = None
     flyer_language: Literal["en", "es"] | None = None
 
 
@@ -69,8 +69,8 @@ class EventResponse(BaseModel):
     volunteer_limit: int | None
     current_signup_count: int
     pantry_mode: str
-    pantry_count: int | None
-    pantry_venue_id: str | None
+    resource_count: int | None
+    resource_id: str | None
     flyer_language: str
     flyer_url: str | None
     shareable_link: str | None
