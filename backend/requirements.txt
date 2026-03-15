@@ -49,3 +49,4 @@ weasyprint
 jinja2
 qrcode[pil]
 Pillow
+staticmap

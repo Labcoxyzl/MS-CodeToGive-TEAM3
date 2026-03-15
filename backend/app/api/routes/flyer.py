@@ -1,10 +1,13 @@
 """Flyer generation route — produces a branded volunteer recruitment PDF."""
 import base64
 import io
+from datetime import datetime
 from pathlib import Path
 
+import httpx
 import qrcode
 import weasyprint
+from staticmap import CircleMarker, StaticMap
 from fastapi import APIRouter, HTTPException, Response
 from jinja2 import Environment, FileSystemLoader
 
@@ -15,7 +18,7 @@ from app.core.supabase import get_supabase_admin
 router = APIRouter(prefix="/flyer", tags=["flyer"])
 
 _TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
-_ASSETS_DIR = Path(__file__).resolve().parents[5] / "assets"
+_ASSETS_DIR = Path(__file__).resolve().parents[4] / "assets"
 _jinja_env = Environment(loader=FileSystemLoader(str(_TEMPLATES_DIR)), autoescape=True)
 
 
@@ -27,6 +30,20 @@ def _build_qr_b64(url: str) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
+def _fmt_time(t: str) -> str:
+    """Convert 'HH:MM:SS', 'HH:MM', or ISO datetime to '12-hr AM/PM' (e.g. '9:00 AM')."""
+    for fmt in ("%H:%M:%S", "%H:%M"):
+        try:
+            return datetime.strptime(t, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    # Handle ISO format: "2026-03-25T10:00:00+00:00"
+    try:
+        return datetime.fromisoformat(t).strftime("%-I:%M %p")
+    except ValueError:
+        return t
+
+
 def _read_logo_svg() -> str:
     """Return the inline SVG markup for the Lemontree text logo."""
     svg_path = _ASSETS_DIR / "lemontree_text_logo.svg"
@@ -35,6 +52,51 @@ def _read_logo_svg() -> str:
     except FileNotFoundError:
         # Graceful fallback: plain-text logo name
         return '<span style="font-size:32px;font-weight:700;color:#2E8B7A;">lemontree</span>'
+
+
+def _read_lemon_svg() -> str:
+    """Return the inline SVG markup for the Lemontree lemon icon."""
+    svg_path = _ASSETS_DIR / "logo.svg"
+    try:
+        return svg_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+
+
+def _build_map_b64(lat: float, lng: float) -> str:
+    """Render a static OSM map centred on lat/lng and return as base64 PNG, or '' on failure."""
+    try:
+        m = StaticMap(508, 300)
+        marker = CircleMarker((lng, lat), "#E86F51", 12)
+        m.add_marker(marker)
+        image = m.render(zoom=14)
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return ""
+
+
+async def _reverse_geocode(lat: float, lng: float) -> str:
+    """Return a human-readable address for lat/lng via Nominatim, or '' on failure."""
+    url = "https://nominatim.openstreetmap.org/reverse"
+    params = {"lat": lat, "lon": lng, "format": "json"}
+    headers = {"User-Agent": "LemontreeVolunteerPlatform/1.0"}
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url, params=params, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+            addr = data.get("address", {})
+            parts = [
+                addr.get("road") or addr.get("pedestrian"),
+                addr.get("suburb") or addr.get("neighbourhood"),
+                addr.get("city") or addr.get("town") or addr.get("village"),
+                addr.get("state"),
+            ]
+            return ", ".join(p for p in parts if p)
+    except Exception:
+        return ""
 
 
 @router.get("/{event_id}")
@@ -59,12 +121,32 @@ async def generate_flyer(event_id: str, current_user: CurrentUser):
     # 5. Generate QR code
     qr_b64 = _build_qr_b64(signup_url)
 
-    # 6. Read SVG logo
+    # 6. Read SVG logos
     logo_svg = _read_logo_svg()
+    lemon_svg = _read_lemon_svg()
 
     # 7. Render HTML template
+    start_fmt = _fmt_time(event.get("start_time", ""))
+    end_fmt = _fmt_time(event.get("end_time", ""))
+
+    location_display = event.get("location_name") or await _reverse_geocode(
+        event["latitude"], event["longitude"]
+    )
+
+    map_b64 = _build_map_b64(event["latitude"], event["longitude"])
+
     template = _jinja_env.get_template("flyer.html")
-    html = template.render(event=event, qr_b64=qr_b64, logo_svg=logo_svg, signup_url=signup_url)
+    html = template.render(
+        event=event,
+        qr_b64=qr_b64,
+        logo_svg=logo_svg,
+        lemon_svg=lemon_svg,
+        signup_url=signup_url,
+        start_time_fmt=start_fmt,
+        end_time_fmt=end_fmt,
+        location_display=location_display,
+        map_b64=map_b64,
+    )
 
     # 8. Convert to PDF
     pdf_bytes = weasyprint.HTML(string=html).write_pdf()
