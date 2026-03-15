@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, FormEvent, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import InputField from "@/app/components/ui/InputField";
 import SelectField from "@/app/components/ui/SelectField";
 import styles from "./signup.module.css";
@@ -75,6 +77,19 @@ export default function SignUpPage() {
 
   const langRef = useRef<HTMLDivElement>(null);
 
+  // Check if user is already logged in
+    const router = useRouter();
+    const [isAuthorized, setIsAuthorized] = useState(false);
+    
+    useEffect(() => {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        router.push("/dashboard");
+      } else {
+        setIsAuthorized(true);
+      }
+    }, [router]);
+    
   // Close language dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -85,6 +100,10 @@ export default function SignUpPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (!isAuthorized) {
+    return null; // Wait for client-side auth check
+  }
 
   function toggleLanguage(lang: string) {
     setLanguages((prev) =>
@@ -153,8 +172,20 @@ export default function SignUpPage() {
       <div className="lt-header">
         <Link href="/" className="lt-header__logo">
           <span>
-            <span className="lt-header__logo-icon" aria-hidden="true" />
-            lemontree
+            <Image
+              src="/logo.svg"
+              alt="Lemontree Icon"
+              width={32}
+              height={32}
+              priority
+            />
+            <Image
+              src="/lemontree_text_logo.svg"
+              alt="Lemontree"
+              width={112}
+              height={24}
+              priority
+            />
           </span>
         </Link>
       </div>

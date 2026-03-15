@@ -3,6 +3,7 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import InputField from "@/app/components/ui/InputField";
 import styles from "./login.module.css";
 
@@ -81,8 +82,20 @@ export default function LoginPage() {
       <div className="lt-header">
         <Link href="/" className="lt-header__logo">
           <span>
-            <span className="lt-header__logo-icon" aria-hidden="true" />
-            lemontree
+            <Image
+              src="/logo.svg"
+              alt="Lemontree Icon"
+              width={32}
+              height={32}
+              priority
+            />
+            <Image
+              src="/lemontree_text_logo.svg"
+              alt="Lemontree"
+              width={112}
+              height={24}
+              priority
+            />
           </span>
         </Link>
       </div>

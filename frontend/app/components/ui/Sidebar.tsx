@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   {
@@ -67,6 +67,28 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/auth/logout`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }
+        });
+      }
+    } catch (err) {
+      console.error("Logout failed:", err);
+    } finally {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      router.push("/login");
+    }
+  }
 
   return (
     <>
@@ -91,6 +113,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             );
           })}
         </nav>
+        
+        <div style={{ marginTop: "auto", padding: "24px" }}>
+          <button
+            onClick={() => {
+              onClose();
+              handleSignOut();
+            }}
+            className="lt-btn lt-btn--outline"
+            style={{ width: "100%", justifyContent: "center" }}
+          >
+            <svg className="lt-sidebar__icon" viewBox="0 0 20 20" fill="currentColor" style={{ marginRight: 8 }}>
+              <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+            </svg>
+            Sign Out
+          </button>
+        </div>
       </aside>
     </>
   );

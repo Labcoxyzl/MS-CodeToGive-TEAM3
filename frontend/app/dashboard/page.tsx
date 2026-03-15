@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
 import StatsCard from "@/app/components/ui/StatsCard";
@@ -196,8 +197,20 @@ export default function DashboardPage() {
         <div className={styles.topBar}>
           <Link href="/" className="lt-header__logo">
             <span>
-              <span className="lt-header__logo-icon" aria-hidden="true" />
-              lemontree
+              <Image
+                src="/logo.svg"
+                alt="Lemontree Icon"
+                width={32}
+                height={32}
+                priority
+              />
+              <Image
+                src="/lemontree_text_logo.svg"
+                alt="Lemontree"
+                width={112}
+                height={24}
+                priority
+              />
             </span>
           </Link>
           <div className={styles.topBarUser}>
