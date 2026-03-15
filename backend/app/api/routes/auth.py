@@ -57,6 +57,10 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def sign_up(body: SignUpRequest):
     client = get_supabase_client()
@@ -123,6 +127,21 @@ async def log_in(body: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if response.user is None:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {
+        "access_token": response.session.access_token,
+        "refresh_token": response.session.refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/refresh")
+async def refresh_token(body: RefreshRequest):
+    try:
+        response = get_supabase_client().auth.refresh_session(body.refresh_token)
+    except AuthApiError:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    if response.session is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
     return {
         "access_token": response.session.access_token,
         "refresh_token": response.session.refresh_token,

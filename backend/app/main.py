@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, events, health, admin, flyer, signups
+from app.api.routes import auth, events, health, admin, flyer, signups, points
 
 app = FastAPI(title="MS CodeToGive API", version="0.1.0")
 
@@ -21,3 +21,4 @@ app.include_router(events.router, prefix="/api/v1")
 app.include_router(admin.router)
 app.include_router(flyer.router, prefix="/api/v1")
 app.include_router(signups.router, prefix="/api/v1")
+app.include_router(points.router, prefix="/api/v1")
