@@ -112,11 +112,11 @@
     /* ── Map ── */
     .map-section {
       flex: 1;
-      min-height: 250px;
-      margin-bottom: 0;
-      border-radius: 10px;
+      min-height: 200px;
+      border-radius: 10px 10px 0 0;
       overflow: hidden;
       border: 1px solid #e0e0e0;
+      border-bottom: none;
     }
     .map-section img {
       display: block;
@@ -124,6 +124,29 @@
       height: 100%;
       object-fit: cover;
     }
+
+    /* ── Map legend ── */
+    .map-legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 14px;
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 0 0 10px 10px;
+      font-size: 11px;
+      color: #555;
+      margin-bottom: 0;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .legend-item { display: flex; align-items: center; }
 
     /* ── Footer ── */
     .footer {
@@ -207,6 +230,20 @@
   {% if map_b64 %}
   <div class="map-section">
     <img src="data:image/png;base64,{{ map_b64 }}" alt="Event location map" />
+  </div>
+  <div class="map-legend">
+    <span class="legend-item">
+      <span class="legend-dot" style="background:#2E8B7A;"></span>
+      Event location
+    </span>
+    <span class="legend-item">
+      <span class="legend-dot" style="background:#6942b5;"></span>
+      Food Pantry
+    </span>
+    <span class="legend-item">
+      <span class="legend-dot" style="background:#E86F51;"></span>
+      Soup Kitchen
+    </span>
   </div>
   {% endif %}
 
