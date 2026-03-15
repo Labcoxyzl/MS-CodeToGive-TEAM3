@@ -28,20 +28,37 @@ async def get_analytics(current_user: CurrentUser):
 
     users_res = admin.table("users").select("id", count="exact").limit(1).execute()
     events_res = admin.table("events").select("id", count="exact").limit(1).execute()
+    signups_res = admin.table("event_signups").select("id", count="exact").limit(1).execute()
+
+    roles_data = admin.table("users").select("role").execute()
+    roles_breakdown: dict[str, int] = {}
+    for row in roles_data.data or []:
+        r = row.get("role", "unknown")
+        roles_breakdown[r] = roles_breakdown.get(r, 0) + 1
 
     return {
         "total_users": users_res.count,
-        "total_events": events_res.count
+        "total_events": events_res.count,
+        "total_signups": signups_res.count or 0,
+        "roles_breakdown": roles_breakdown,
     }
 
 
 @router.get("/users")
-async def get_all_users(current_user: CurrentUser, skip: int = 0, limit: int = 20):
+async def get_all_users(current_user: CurrentUser, skip: int = 0, limit: int = 20, search: str = ""):
     require_admin(current_user)
     admin = get_supabase_admin()
 
-    response = admin.table("users").select("*").range(skip, skip + limit - 1).execute()
-    count_res = admin.table("users").select("id", count="exact").limit(1).execute()
+    query = admin.table("users").select("*")
+    count_query = admin.table("users").select("id", count="exact").limit(1)
+
+    if search:
+        filt = f"name.ilike.%{search}%,email.ilike.%{search}%"
+        query = query.or_(filt)
+        count_query = count_query.or_(filt)
+
+    response = query.range(skip, skip + limit - 1).execute()
+    count_res = count_query.execute()
 
     return {
         "total": count_res.count,
@@ -63,12 +80,19 @@ async def update_user_role(user_id: str, body: UpdateRoleRequest, current_user: 
 
 
 @router.get("/events")
-async def get_all_events(current_user: CurrentUser, skip: int = 0, limit: int = 20):
+async def get_all_events(current_user: CurrentUser, skip: int = 0, limit: int = 20, status: str = ""):
     require_admin(current_user)
     admin = get_supabase_admin()
 
-    response = admin.table("events").select("*").range(skip, skip + limit - 1).execute()
-    count_res = admin.table("events").select("id", count="exact").limit(1).execute()
+    query = admin.table("events").select("*")
+    count_query = admin.table("events").select("id", count="exact").limit(1)
+
+    if status:
+        query = query.eq("status", status)
+        count_query = count_query.eq("status", status)
+
+    response = query.range(skip, skip + limit - 1).execute()
+    count_res = count_query.execute()
 
     return {
         "total": count_res.count,
