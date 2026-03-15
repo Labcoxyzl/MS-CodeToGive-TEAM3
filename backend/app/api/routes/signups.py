@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 
 from app.core.auth import CurrentUser
+from app.core.points import award_points, calculate_event_points
 from app.core.supabase import get_supabase_admin
 
 router = APIRouter(prefix="/events", tags=["signups"])
@@ -218,23 +219,37 @@ async def check_in_volunteer(event_id: str, signup_id: str, current_user: Curren
     db = get_supabase_admin()
 
     # Verify requester is the event leader
-    event_result = db.table("events").select("id, event_leader_id").eq("id", event_id).execute()
+    event_result = db.table("events").select("id, event_leader_id, start_time, end_time").eq("id", event_id).execute()
     if not event_result.data:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    if event_result.data[0]["event_leader_id"] != current_user["sub"]:
+    event = event_result.data[0]
+    if event["event_leader_id"] != current_user["sub"]:
         raise HTTPException(status_code=403, detail="Only the event leader can check in volunteers")
 
     signup_result = db.table("event_signups").select("*").eq("id", signup_id).eq("event_id", event_id).execute()
     if not signup_result.data:
         raise HTTPException(status_code=404, detail="Signup not found")
 
-    if signup_result.data[0]["status"] == "cancelled":
+    signup = signup_result.data[0]
+    if signup["status"] == "cancelled":
         raise HTTPException(status_code=422, detail="Cannot check in a cancelled signup")
 
     now = datetime.now(timezone.utc).isoformat()
     updated = db.table("event_signups").update({"status": "attended", "checked_in_at": now}).eq("id", signup_id).execute()
     if not updated.data:
         raise HTTPException(status_code=500, detail="Failed to check in volunteer")
+
+    # Award points to the volunteer (authenticated users only, not guests)
+    if signup.get("user_id"):
+        points = calculate_event_points(event["start_time"], event["end_time"])
+        award_points(
+            db,
+            user_id=signup["user_id"],
+            action="event_attended",
+            points=points,
+            event_id=event_id,
+            description=f"Attended event ({points // 10}hr)",
+        )
 
     return updated.data[0]
