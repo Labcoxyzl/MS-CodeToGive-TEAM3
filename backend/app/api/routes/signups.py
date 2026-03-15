@@ -174,16 +174,20 @@ async def cancel_signup(event_id: str, current_user: CurrentUser):
 
 @router.get("/{event_id}/signups", response_model=list[SignupWithDetailsResponse])
 async def list_event_signups(event_id: str, current_user: CurrentUser):
-    """List all signups for an event — only accessible by the event leader."""
+    """List all signups for an event — only accessible by the event leader or an admin."""
     db = get_supabase_admin()
 
-    # Verify event exists and requester is the leader
+    # Verify event exists and requester is the leader or an admin
     event_result = db.table("events").select("id, event_leader_id").eq("id", event_id).execute()
     if not event_result.data:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    if event_result.data[0]["event_leader_id"] != current_user["sub"]:
-        raise HTTPException(status_code=403, detail="Only the event leader can view signups")
+    user_result = db.table("users").select("role").eq("id", current_user["sub"]).maybe_single().execute()
+    is_admin = user_result.data and user_result.data["role"] == "admin"
+    is_leader = event_result.data[0]["event_leader_id"] == current_user["sub"]
+
+    if not is_leader and not is_admin:
+        raise HTTPException(status_code=403, detail="Only the event leader or an admin can view signups")
 
     signups = db.table("event_signups").select("*").eq("event_id", event_id).neq("status", "cancelled").execute()
 
