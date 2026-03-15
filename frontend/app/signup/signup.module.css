@@ -59,6 +59,13 @@
   height: 16px;
 }
 
+.otherLangInputWrapper {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--lt-border);
+}
+
 /* ── Role Selection Cards ──────────────────────────────────── */
 .roleCardsWrapper {
   display: grid;
