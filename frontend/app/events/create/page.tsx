@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Copy, ChevronDown, Check, AlertCircle, X } from 'lucide-react';
 
 // ─── Brand tokens ──────────────────────────────────────────────────────────────
@@ -272,7 +274,6 @@ function HandsBanner() {
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-// ─── Types ─────────────────────────────────────────────────────────────────────
 interface Form {
   title: string;
   description: string;
@@ -374,12 +375,10 @@ export default function CreateEventPage() {
       {/* ── Yellow header bar with real logo ── */}
       <header style={{background:'#fecc0e', height:60, display:'flex', alignItems:'center',
         justifyContent:'space-between', padding:'0 24px', flexShrink:0}}>
-        <div style={{display:'flex', alignItems:'center', gap:10}}>
-          <img src="/logo-icon.png" alt="lemontree"
-            style={{width:46, height:46, borderRadius:'50%', objectFit:'cover', flexShrink:0}} />
-          <img src="/logo-wordmark.svg" alt="lemontree"
-            style={{height:33, width:'auto', filter:'brightness(0)', flexShrink:0}} />
-        </div>
+        <Link href="/dashboard" style={{display:'flex', alignItems:'center', gap:10, textDecoration:'none'}}>
+          <Image src="/logo.svg" alt="Lemontree" width={42} height={42} priority />
+          <Image src="/lemontree_text_logo.svg" alt="Lemontree" width={112} height={24} priority style={{filter:'brightness(0)'}} />
+        </Link>
         <div style={{display:'flex', alignItems:'center', gap:8, background:'rgba(45,42,38,0.12)',
           padding:'6px 14px', borderRadius:999, fontSize:12, fontWeight:600,
           textTransform:'uppercase', letterSpacing:'0.5px', color:'#2D2A26',
@@ -428,7 +427,7 @@ export default function CreateEventPage() {
         {/* Banners */}
         {ok && (
           <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:10,padding:'11px 16px',borderRadius:5,fontSize:13,fontWeight:500,background:C.tealLight,color:C.teal,border:`1.5px solid ${C.teal}44`}}>
-            <Check size={14}/><span>Event created — it's live!</span>
+            <Check size={14}/><span>Event created — it&apos;s live!</span>
             <button onClick={()=>setOk(false)} style={{marginLeft:'auto',background:'none',border:'none',cursor:'pointer',color:C.teal,opacity:.6}}><X size={13}/></button>
           </div>
         )}
