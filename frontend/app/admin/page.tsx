@@ -174,6 +174,7 @@ export default function AdminPage() {
         setUsers((prev) =>
           prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
         );
+        fetchAnalytics();
         showToast("Role updated successfully", "success");
       } else {
         const err = await res.json().catch(() => ({}));
