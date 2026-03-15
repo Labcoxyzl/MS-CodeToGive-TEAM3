@@ -6,8 +6,10 @@ from app.core.supabase import get_supabase_admin
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+from typing import Literal
+
 class UpdateRoleRequest(BaseModel):
-    role: str
+    role: Literal["volunteer", "leader", "promoter", "admin"]
 
 
 def require_admin(current_user: CurrentUser) -> dict:

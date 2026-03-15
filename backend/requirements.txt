@@ -45,3 +45,7 @@ uvicorn==0.30.6
 uvloop==0.22.1
 watchfiles==1.1.1
 websockets==15.0.1
+weasyprint
+jinja2
+qrcode[pil]
+Pillow

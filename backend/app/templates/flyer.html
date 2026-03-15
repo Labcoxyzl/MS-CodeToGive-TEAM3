@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: #ffffff;
+      color: #111828;
+      width: 612px;   /* US Letter width at 72dpi */
+      min-height: 792px;
+      padding: 48px 52px;
+    }
+
+    /* ── Logo ── */
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .logo-wrap svg {
+      height: 56px;
+      width: auto;
+    }
+
+    /* ── Title ── */
+    .event-title {
+      text-align: center;
+      font-size: 26px;
+      font-weight: 700;
+      color: #2E8B7A;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .event-description {
+      text-align: center;
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* ── Details card ── */
+    .details-card {
+      border: 2px solid #2E8B7A;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      background: #f8fffd;
+    }
+
+    .detail-row {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+    .detail-row:last-child { margin-bottom: 0; }
+
+    .detail-label {
+      color: #E86F51;
+      font-weight: 600;
+      min-width: 110px;
+      flex-shrink: 0;
+    }
+
+    .detail-value {
+      color: #111828;
+    }
+
+    /* ── QR section ── */
+    .qr-section {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 32px;
+      padding: 20px 24px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      background: #fffdf4;
+    }
+
+    .qr-section img {
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+
+    .qr-text .scan-label {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111828;
+      margin-bottom: 6px;
+    }
+
+    .qr-text .scan-url {
+      font-size: 11px;
+      color: #2E8B7A;
+      word-break: break-all;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 2px solid #FFC82E;
+      padding-top: 14px;
+      font-size: 12px;
+      color: #888;
+    }
+
+    .footer .brand {
+      font-weight: 700;
+      color: #2E8B7A;
+      font-size: 14px;
+    }
+
+    .footer .site {
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Logo -->
+  <div class="logo-wrap">
+    {{ logo_svg | safe }}
+  </div>
+
+  <!-- Event title + description -->
+  <div class="event-title">{{ event.title }}</div>
+  {% if event.description %}
+  <div class="event-description">{{ event.description }}</div>
+  {% endif %}
+
+  <!-- Event details -->
+  <div class="details-card">
+    {% if event.location_name %}
+    <div class="detail-row">
+      <span class="detail-label">📍 Location</span>
+      <span class="detail-value">{{ event.location_name }}</span>
+    </div>
+    {% endif %}
+    <div class="detail-row">
+      <span class="detail-label">📅 Date</span>
+      <span class="detail-value">{{ event.date }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">⏰ Time</span>
+      <span class="detail-value">{{ event.start_time }} – {{ event.end_time }}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">👥 Volunteers</span>
+      <span class="detail-value">
+        {% if event.volunteer_limit %}
+          {{ event.volunteer_limit }} spots available
+        {% else %}
+          Open to all
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <!-- QR code -->
+  <div class="qr-section">
+    <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR code to sign up" />
+    <div class="qr-text">
+      <div class="scan-label">Scan to sign up!</div>
+      <div class="scan-url">{{ signup_url }}</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="brand">lemontree</span>
+    <span class="site">foodhelpline.org</span>
+  </div>
+
+</body>
+</html>

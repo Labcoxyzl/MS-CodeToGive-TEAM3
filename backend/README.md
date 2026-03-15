@@ -3,7 +3,7 @@
 ## Setup
 
 (Would suggest at least Python 3.11)
-```bash
+```zsh
 cd backend
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\\Scripts\\activate
@@ -12,13 +12,13 @@ pip install -r requirements.txt
 
 Copy the root `.env.example` to `.env` and fill in your values:
 
-```bash
+```zsh
 cp ../.env.example ../.env
 ```
 
 ## Run
 
-```bash
+```zsh
 uvicorn app.main:app --reload
 ```
 
@@ -53,41 +53,87 @@ async def me(user: CurrentUser):
     return {"user_id": user["sub"]}
 ```
 
----
+## Auth API — cURL Tests                                                                                            
+                                                                                                                      
+  ### Sign Up (minimal)
+  ```zsh                                                                                                             
+  curl -s -X POST http://localhost:8000/api/v1/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{                                                                                                             
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "password": "password123"
+    }'
 
-## API Endpoints
+  Sign Up (full)
 
-Full interactive docs available at `http://localhost:8000/docs`
+  curl -s -X POST http://localhost:8000/api/v1/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "John Doe",
+      "email": "john@example.com",
+      "password": "password123",
+      "phone": "555-867-5309",
+      "category": "corporate",
+      "languages": ["en", "es"],
+      "referral_source": "friend",
+      "referral_code": "abc12345"
+    }'
 
-### Auth (`/api/v1/auth`)
+  Sign Up — duplicate email (expect 409)
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/v1/auth/signup` | No | Register a new user |
-| `POST` | `/api/v1/auth/login` | No | Login and receive JWT |
-| `POST` | `/api/v1/auth/logout` | Yes | Logout current user |
+  curl -s -X POST http://localhost:8000/api/v1/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "password": "password123"
+    }'
 
-### Events (`/api/v1/events`)
+  Log In (valid credentials)
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/v1/events/` | No | List all public events. Filters: `status`, `date_from`, `date_to`, `page`, `limit` |
-| `POST` | `/api/v1/events/` | Yes | Create a new flyering event |
-| `GET` | `/api/v1/events/my/created` | Yes | Get events created by the current user |
-| `GET` | `/api/v1/events/my/joined` | Yes | Get events the current user has signed up for |
-| `GET` | `/api/v1/events/{event_id}` | No | Get a single event by ID |
-| `PUT` | `/api/v1/events/{event_id}` | Yes (leader only) | Update an event |
-| `DELETE` | `/api/v1/events/{event_id}` | Yes (leader only) | Soft-cancel an event |
-| `GET` | `/api/v1/events/{event_id}/nearby-resources` | No | Fetch nearby food resources from Lemontree API. Param: `count` (1-10, default 4) |
+  curl -s -X POST http://localhost:8000/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{
+      "email": "jane@example.com",
+      "password": "password123"
+    }'
 
-### Admin (`/api/v1/admin`)
+  Log In — wrong password (expect 401)
 
-> All admin endpoints require a valid JWT from a user with `role = "admin"`.
+  curl -s -X POST http://localhost:8000/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{
+      "email": "jane@example.com",
+      "password": "wrongpassword"
+    }'
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/v1/admin/analytics` | Yes (admin) | Get total user and event counts |
-| `GET` | `/api/v1/admin/users` | Yes (admin) | List all users. Params: `skip`, `limit` |
-| `PUT` | `/api/v1/admin/users/{user_id}/role` | Yes (admin) | Update a user's role |
-| `GET` | `/api/v1/admin/events` | Yes (admin) | List all events. Params: `skip`, `limit` |
-| `DELETE` | `/api/v1/admin/events/{event_id}` | Yes (admin) | Force delete an event |
+  Log Out (requires access token from login)
+
+  TOKEN="<paste access_token from login response>"
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/logout \
+    -H "Authorization: Bearer $TOKEN"
+
+  Log Out — no token (expect 403)
+
+  curl -s -X POST http://localhost:8000/api/v1/auth/logout
+
+## Events API — cURL Tests
+
+### Create event
+
+curl -s -X POST http://localhost:8000/api/v1/events/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "title": "Mission District Outreach",
+    "description": "Help distribute food pantry flyers.",
+    "date": "2026-04-20",
+    "start_time": "10:00:00",
+    "end_time": "13:00:00",
+    "location_name": "Mission Dolores Park",
+    "latitude": 37.7599,
+    "longitude": -122.4148,
+    "volunteer_limit": 10
+  }'
