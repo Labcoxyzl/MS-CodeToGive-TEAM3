@@ -24,3 +24,171 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* ─────────────────────────────────────────────────────────────
+   Lemontree design tokens — paste into frontend/app/globals.css
+   ───────────────────────────────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+:root {
+  --lt-yellow: #fecc0e;
+  --lt-yellow-light: #FBE89A;
+  --lt-purple: #784cc5;
+  --lt-purple-hover: #5A37A8;
+  --lt-purple-light: #f0e8f8;
+  --lt-teal: #2E8B7A;
+  --lt-teal-hover: #247060;
+  --lt-teal-light: #D3EFEA;
+  --lt-coral: #E86F51;
+  --lt-bg: #fef6df;
+  --lt-card-bg: white;
+  --lt-card-bg-white: #FFFFFF;
+  --lt-card-bg-muted: #f2d1be;
+  --lt-border: #e8d8cc;
+  --lt-border-focus: #2E8B7A;
+  --lt-text-primary: #2D2A26;
+  --lt-text-secondary: #6B6560;
+  --lt-text-muted: #9C9690;
+  --lt-error: #D63B2F;
+  --lt-error-bg: #FEF0EF;
+  --lt-success: #2E8B7A;
+  --lt-radius-sm: 8px;
+  --lt-radius-md: 14px;
+  --lt-radius-lg: 16px;
+  --lt-radius-full: 9999px;
+  --lt-shadow-card: 0 1px 6px rgba(0,0,0,0.04);
+  --lt-shadow-elevated: 0 8px 30px rgba(0,0,0,0.10);
+  --lt-transition: 0.2s ease;
+  --font-dm-sans: 'DM Sans', sans-serif;
+}
+
+body {
+  font-family: var(--font-dm-sans);
+  background-color: var(--lt-bg);
+  color: var(--lt-text-primary);
+}
+
+/* ── Inputs ── */
+.lt-input, .lt-select, .lt-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: var(--font-dm-sans);
+  color: var(--lt-text-primary);
+  background: var(--lt-card-bg-white);
+  border: 1px solid var(--lt-border);
+  border-radius: var(--lt-radius-sm);
+  outline: none;
+  transition: border-color var(--lt-transition), box-shadow var(--lt-transition);
+  box-sizing: border-box;
+}
+.lt-input::placeholder, .lt-textarea::placeholder { color: var(--lt-text-muted); }
+.lt-input:focus, .lt-select:focus, .lt-textarea:focus {
+  border-color: var(--lt-border-focus);
+  box-shadow: 0 0 0 3px var(--lt-teal-light);
+}
+.lt-textarea { resize: vertical; min-height: 130px; line-height: 1.6; }
+.lt-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%236B6560' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+/* ── Buttons ── */
+.lt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font-dm-sans);
+  border-radius: var(--lt-radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  line-height: 1;
+  white-space: nowrap;
+}
+.lt-btn--primary { background: var(--lt-teal); color: #fff; }
+.lt-btn--primary:hover {
+  background: var(--lt-teal-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(46,139,122,0.30);
+}
+.lt-btn--primary:active { transform: translateY(0); }
+.lt-btn--primary:disabled {
+  background: var(--lt-text-muted); cursor: not-allowed;
+  transform: none; box-shadow: none;
+}
+.lt-btn--outline {
+  background: transparent; color: var(--lt-purple);
+  border: 1.5px solid var(--lt-purple);
+}
+.lt-btn--outline:hover { background: var(--lt-purple-light); }
+.lt-btn--ghost {
+  background: transparent; color: var(--lt-text-secondary);
+  border: 1px solid var(--lt-border);
+}
+.lt-btn--ghost:hover {
+  background: var(--lt-card-bg-muted);
+  color: var(--lt-text-primary);
+  border-color: #ccc;
+}
+.lt-btn--sm { padding: 8px 16px; font-size: 13px; }
+
+/* ── Labels ── */
+.lt-label {
+  display: block; font-size: 14px; font-weight: 600;
+  color: var(--lt-text-primary); margin-bottom: 6px;
+  font-family: var(--font-dm-sans);
+}
+.lt-label__required { color: var(--lt-error); margin-left: 2px; }
+
+/* ── Section headers ── */
+.lt-section-header {
+  font-family: var(--font-dm-sans); font-size: 13px; font-weight: 700;
+  color: var(--lt-teal); text-transform: uppercase; letter-spacing: 0.7px;
+  margin: 0 0 16px; padding-bottom: 8px;
+  border-bottom: 2px solid var(--lt-teal-light);
+}
+
+/* ── Badges ── */
+.lt-badge {
+  display: inline-flex; align-items: center;
+  padding: 4px 12px; font-size: 12px; font-weight: 600;
+  border-radius: var(--lt-radius-full); line-height: 1.4;
+}
+.lt-badge--teal { background: var(--lt-teal-light); color: var(--lt-teal); }
+.lt-badge--purple { background: var(--lt-purple-light); color: var(--lt-purple); }
+.lt-badge--yellow { background: var(--lt-yellow-light); color: #9A7D00; }
+
+/* ── Spinner ── */
+@keyframes lt-spin { to { transform: rotate(360deg); } }
+.lt-spinner {
+  width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: #fff; border-radius: 50%;
+  animation: lt-spin 0.6s linear infinite; display: inline-block;
+}
+
+/* ── Error/success inline ── */
+.lt-error-text {
+  font-size: 13px; color: var(--lt-error);
+  margin-top: 4px; display: flex; align-items: center; gap: 4px;
+}
+
+/* ── Panel ── */
+.lt-panel {
+  background: var(--lt-card-bg-white);
+  border: 1px solid var(--lt-border);
+  border-radius: var(--lt-radius-md);
+  padding: 24px;
+}
