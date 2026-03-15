@@ -429,25 +429,8 @@
   opacity: 1;
 }
 
-.lt-page .lt-sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-  z-index: 1000;
-}
-
-.lt-page .lt-sidebar--open {
-  transform: translateX(0);
-}
-
 .lt-page .lt-sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 999;
+  display: none;
 }
 /* ── Stats Card ───────────────────────────────────────────────── */
 .lt-stat-card {

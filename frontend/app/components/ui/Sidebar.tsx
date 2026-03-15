@@ -1,24 +1,32 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { apiFetch } from "@/app/lib/api";
 
-const NAV_ITEMS = [
-  
-    {
-  label: "Welcome",
-  href: "/welcome",
-  icon: (
-    <svg className="lt-sidebar__icon" viewBox="0 0 20 20" fill="currentColor">
-      <path
-        fillRule="evenodd"
-        d="M10 2a8 8 0 100 16 8 8 0 000-16zm6 8a5.978 5.978 0 01-1.528 3.988A7.96 7.96 0 0013 10a7.96 7.96 0 001.472-3.988A5.978 5.978 0 0116 10zM10 4c.9 1.1 1.5 2.5 1.5 4S10.9 10.9 10 12c-.9-1.1-1.5-2.5-1.5-4S9.1 5.1 10 4zM4 10c0-1.5.56-2.87 1.528-3.988A7.96 7.96 0 007 10a7.96 7.96 0 00-1.472 3.988A5.978 5.978 0 014 10zm6 6c-.9-1.1-1.5-2.5-1.5-4S9.1 9.1 10 8c.9 1.1 1.5 2.5 1.5 4S10.9 14.9 10 16z"
-        clipRule="evenodd"
-      />
-    </svg>
-  ),
-},
-{
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  adminOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    label: "Welcome",
+    href: "/welcome",
+    icon: (
+      <svg className="lt-sidebar__icon" viewBox="0 0 20 20" fill="currentColor">
+        <path
+          fillRule="evenodd"
+          d="M10 2a8 8 0 100 16 8 8 0 000-16zm6 8a5.978 5.978 0 01-1.528 3.988A7.96 7.96 0 0013 10a7.96 7.96 0 001.472-3.988A5.978 5.978 0 0116 10zM10 4c.9 1.1 1.5 2.5 1.5 4S10.9 10.9 10 12c-.9-1.1-1.5-2.5-1.5-4S9.1 5.1 10 4zM4 10c0-1.5.56-2.87 1.528-3.988A7.96 7.96 0 007 10a7.96 7.96 0 00-1.472 3.988A5.978 5.978 0 014 10zm6 6c-.9-1.1-1.5-2.5-1.5-4S9.1 9.1 10 8c.9 1.1 1.5 2.5 1.5 4S10.9 14.9 10 16z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ),
+  },
+  {
     label: "Dashboard",
     href: "/dashboard",
     icon: (
@@ -75,6 +83,7 @@ const NAV_ITEMS = [
   {
     label: "Admin Panel",
     href: "/admin",
+    adminOnly: true,
     icon: (
       <svg className="lt-sidebar__icon" viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -91,11 +100,34 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+
+  const checkAdmin = useCallback(async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setIsAdmin(false);
+      return;
+    }
+    try {
+      const res = await apiFetch("/admin/analytics");
+      setIsAdmin(res.ok);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkAdmin();
+  }, [checkAdmin]);
 
   function handleLogout() {
     localStorage.removeItem("access_token");
     router.push("/login");
   }
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.adminOnly || isAdmin === true
+  );
 
   return (
     <>
@@ -105,7 +137,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       <aside className={`lt-sidebar${isOpen ? " lt-sidebar--open" : ""}`}>
         <div className="lt-sidebar__title">Menu</div>
         <nav className="lt-sidebar__nav">
-          {NAV_ITEMS.map((item) => {
+          {visibleItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
