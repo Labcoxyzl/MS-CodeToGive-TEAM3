@@ -8,10 +8,17 @@ interface UpcomingEventsTableProps {
   events: UpcomingEvent[];
 }
 
-function StatusBadge({ status }: { status: string }) {
+function RegisteredBadge({ registered }: { registered: boolean }) {
+  if (registered) {
+    return (
+      <span className="lt-badge lt-badge--success" style={{ background: 'var(--lt-teal-light)', color: 'var(--lt-teal)' }}>
+        Yes
+      </span>
+    );
+  }
   return (
-    <span className={`lt-badge lt-badge--${status}`}>
-      {status.charAt(0).toUpperCase() + status.slice(1)}
+    <span className="lt-badge lt-badge--ghost" style={{ background: '#f0f0f0', color: 'var(--lt-text-secondary)' }}>
+      No
     </span>
   );
 }
@@ -28,7 +35,7 @@ export default function UpcomingEventsTable({ events }: UpcomingEventsTableProps
           <tr>
             <th>Location</th>
             <th>Date</th>
-            <th>Status</th>
+            <th>Registered</th>
           </tr>
         </thead>
         <tbody>
@@ -47,7 +54,7 @@ export default function UpcomingEventsTable({ events }: UpcomingEventsTableProps
               </td>
               <td>{event.date}</td>
               <td>
-                <StatusBadge status={event.status} />
+                <RegisteredBadge registered={event.registered} />
               </td>
             </tr>
           ))}

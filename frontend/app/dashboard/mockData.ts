@@ -77,7 +77,7 @@ export interface UpcomingEvent {
   title: string;
   location: string;
   date: string;
-  status: "upcoming" | "active";
+  registered: boolean;
 }
 
 export const MOCK_UPCOMING_EVENTS: UpcomingEvent[] = [
@@ -86,21 +86,21 @@ export const MOCK_UPCOMING_EVENTS: UpcomingEvent[] = [
     title: "East Village Flyering",
     location: "East Village, NY",
     date: "Mar 18, 2026",
-    status: "upcoming",
+    registered: false,
   },
   {
     id: "evt-u2",
     title: "Washington Heights Outreach",
     location: "Washington Heights, NY",
     date: "Mar 22, 2026",
-    status: "upcoming",
+    registered: true,
   },
   {
     id: "evt-u3",
     title: "Midtown Food Resource Drive",
     location: "Midtown, NY",
     date: "Mar 25, 2026",
-    status: "upcoming",
+    registered: false,
   },
 ];
 

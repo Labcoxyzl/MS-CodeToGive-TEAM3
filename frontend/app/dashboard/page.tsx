@@ -29,7 +29,7 @@ export default function DashboardPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   const [userState, setUserState] = useState({ name: "", initials: "" });
-  const [stats, setStats] = useState({ flyersDistributed: 142, eventsAttended: 0, upcomingEvents: 0, pointsEarned: 0 });
+  const [stats, setStats] = useState({ eventsAttended: 0, upcomingEvents: 0, pointsEarned: 0 });
   const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +96,13 @@ export default function DashboardPage() {
         const joinedRes = await fetch(`${API_URL}/api/v1/events/my/joined`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
+        
+        if (joinedRes.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          router.push("/login");
+          return;
+        }
         const joinedEvents = await joinedRes.json();
 
         const now = new Date();
@@ -144,7 +151,6 @@ export default function DashboardPage() {
         const attendedCount = Array.isArray(attendedData) ? attendedData.length : 0;
 
         setStats({
-          flyersDistributed: 142, // Static mock for now
           eventsAttended: attendedCount,
           upcomingEvents: upcomingCount,
           pointsEarned: points
@@ -161,12 +167,14 @@ export default function DashboardPage() {
            const upcoming = publicEvents.filter(ev => new Date(ev.start_time || ev.date || Date.now()) >= now && ev.status !== "cancelled");
            upcomingFormatted.push(...upcoming.slice(0, 3).map(ev => {
              const d = new Date(ev.start_time || ev.date || Date.now());
+             // Check if user is registered for this event
+             const isRegistered = Array.isArray(joinedEvents) && joinedEvents.some(je => je.id === ev.id);
              return {
                 id: ev.id,
                 title: ev.title,
                 location: ev.location_name || "Unknown",
                 date: d.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }),
-                status: (ev.status === "active" ? "active" : "upcoming") as "active" | "upcoming"
+                registered: isRegistered
              };
            }));
         }
@@ -245,12 +253,6 @@ export default function DashboardPage() {
 
               {/* Stats Cards */}
               <div className={styles.statsRow}>
-                <StatsCard
-                  icon="📄"
-                  value={stats.flyersDistributed}
-                  label="Flyers Distributed"
-                  colorClass="lt-stat-card__icon--yellow"
-                />
                 <StatsCard
                   icon="✅"
                   value={stats.eventsAttended}

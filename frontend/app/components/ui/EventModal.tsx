@@ -137,6 +137,7 @@ export default function EventModal({ eventId, onClose }: EventModalProps) {
       const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
       const headers = {
         "Authorization": `Bearer ${token}`,
+        "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
         "Content-Type": "application/json",
       };
       
@@ -173,6 +174,7 @@ export default function EventModal({ eventId, onClose }: EventModalProps) {
       const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
       const headers = {
         "Authorization": `Bearer ${token}`,
+        "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
         "Content-Type": "application/json",
       };
       
