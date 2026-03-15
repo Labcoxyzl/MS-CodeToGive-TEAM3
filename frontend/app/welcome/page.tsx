@@ -10,22 +10,60 @@ import { useRouter } from "next/navigation";
 import Map, {Marker} from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-
+import { Inter } from "next/font/google";
 
 
 
 export default function WelcomePage() {
-
+// ===== PAGE UI STATE =====
+  // controls sidebar visibility, search toggle, dropdown expansion,
+  // map markers data, selected resource panel, and viewport position
 
  const [menuOpen, setMenuOpen] = useState(false);
  const [searchOpen, setSearchOpen] = useState(false);
  const [searchQuery, setSearchQuery] = useState("");
  const [eventsOpen, setEventsOpen] = useState(false);
- const [markers, setMarkers] = useState<{ id: string; lng: number; lat: number; type: string }[]>([]);
+ // resource markers loaded from FoodHelpline API
+ const [markers, setMarkers] = useState<
+  { id: string; lng: number; lat: number; type: string; name?: string }[]
+>([]);
+// current map viewport (center + zoom)
  const [viewState, setViewState] = useState({ longitude: -73.94, latitude: 40.82, zoom: 11 });
+ // selected resource shown in floating detail panel
  const [selectedResource, setSelectedResource] = useState<any>(null);
+ // loading spinner state when fetching resource details
  const [loadingResource, setLoadingResource] = useState(false);
+ // loading spinner state when fetching resource details
+ const areaMap: Record<string, { longitude: number; latitude: number; zoom: number }> = {
+  "harlem": { longitude: -73.9442, latitude: 40.8116, zoom: 13 },
+  "bronx": { longitude: -73.8648, latitude: 40.8448, zoom: 11 },
+  "brooklyn": { longitude: -73.9442, latitude: 40.6782, zoom: 11 },
+  "queens": { longitude: -73.7949, latitude: 40.7282, zoom: 11 },
+  "manhattan": { longitude: -73.9712, latitude: 40.7831, zoom: 11 },
+  "inwood": { longitude: -73.9212, latitude: 40.8677, zoom: 14 },
+  "washington heights": { longitude: -73.9400, latitude: 40.8500, zoom: 13 },
+  "lower east side": { longitude: -73.9897, latitude: 40.7150, zoom: 13 },
+  "upper west side": { longitude: -73.9754, latitude: 40.7870, zoom: 13 },
+  "upper east side": { longitude: -73.9566, latitude: 40.7736, zoom: 13 },
+};
+// handles search submission and moves map to selected neighborhood
+function handleAreaSearch() {
+  const query = searchQuery.trim().toLowerCase();
+  const area = areaMap[query];
 
+  if (!area) {
+    alert("Area not found. Try Harlem, Bronx, Brooklyn, Queens, Manhattan, or Inwood.");
+    return;
+  }
+
+  setViewState((prev) => ({
+    ...prev,
+    longitude: area.longitude,
+    latitude: area.latitude,
+    zoom: area.zoom,
+  }));
+}
+// fetch full resource details when a marker is clicked
  async function handleMarkerClick(id: string) {
    setSelectedResource(null);
    setLoadingResource(true);
@@ -41,7 +79,7 @@ export default function WelcomePage() {
      setLoadingResource(false);
    }
  }
-
+ // load resource markers within current map bounds
  async function loadMarkers(bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number }) {
    try {
      const url = `https://platform.foodhelpline.org/api/resources/markersWithinBounds`
@@ -54,15 +92,21 @@ export default function WelcomePage() {
      const featureCollection = raw.features ? raw : raw.json;
      const features: any[] = featureCollection?.features ?? [];
 
-     setMarkers(features
-       .filter((f: any) => f.geometry?.coordinates?.length >= 2)
-       .map((f: any) => ({
-         id: f.properties.id,
-         type: f.properties.resourceTypeId,
-         lng: f.geometry.coordinates[0],
-         lat: f.geometry.coordinates[1],
-       }))
-     );
+     setMarkers(
+    features
+    .filter((f: any) => f.geometry?.coordinates?.length >= 2)
+    .map((f: any) => ({
+      id: f.properties.id,
+      type: f.properties.resourceTypeId,
+      lng: f.geometry.coordinates[0],
+      lat: f.geometry.coordinates[1],
+      name:
+      f.properties.name ??
+      (f.properties.resourceTypeId === "SOUP_KITCHEN"
+    ? "Soup Kitchen Resource"
+    : "Food Pantry Resource"),
+    }))
+);
    } catch (err) {
      console.error("Error loading markers:", err);
    }
@@ -72,66 +116,86 @@ useEffect(() => {
   loadMarkers({ minLng: -74.1, minLat: 40.7, maxLng: -73.8, maxLat: 40.9 });
 }, []);
 
+
  return (
    <div className="min-h-screen bg-[#fff8df] flex flex-col">
 
 
-{/* HEADER */}
+{/* header */}
     <header className="relative bg-[#ffcb00] border-b">
-       <div className="grid grid-cols-3 items-center px-2 py-2">
+       <div className="relative flex items-center justify-between px-4 py-3">
+
+{/* menu and search icons */}
+   <div className="flex items-center gap-4 flex-shrink-0">
+  <Menu className="w-6 h-8 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)} />
+  <Search className="w-6 h-6 cursor-pointer" onClick={() => setSearchOpen(!searchOpen)} />
+</div>
 
 
-   <div className="flex items-center gap-4">
-{/* menu/search icons */}
-   <Menu className="w-6 h-8 cursor-pointer" onClick={() => setMenuOpen(!menuOpen)} />
-   <Search className="w-6 h-6 cursor-pointer" onClick={() => setSearchOpen(!searchOpen)}/>
-   </div>
 
 
 {/* logo */}
-   <div className="flex justify-center">
-     <Link href="/" className="flex items-center gap-2">
-       <img src="/logo_icon.svg" className="h-9 w-auto" alt="logo icon" width={32} height={32} />
-       <img src="/logo_name.svg" className="h-9 w-auto" alt="logo name" width={128} height={32} />
-     </Link>
-   </div>
+<div className="absolute left-1/2 -translate-x-1/2">
+  <Link
+    href="https://www.foodhelpline.org/"
+    className="flex items-center gap-2"
+  >
+    <img src="/logo_icon.svg" className="h-7 md:h-9 w-auto" alt="logo icon" />
+    <img src="/logo_name.svg" className="hidden sm:block h-7 md:h-9 w-auto" alt="logo name" />
 
 
-<div className="flex justify-end gap-4">
+  </Link>
+</div>
+
+
+<div className="flex justify-end gap-2 md:gap-4 flex-shrink-0">
 
 
 {/* login button */}
- <Link href="/login">
-   <button className="px-6 py-2 border-2 border-black text-black rounded-lg tracking-wide hover:bg-yellow-400 transition">
-     LOG IN
-   </button>
- </Link>
+  <Link href="/login">
+    <button className="px-3 md:px-6 py-2 border-2 border-black text-black rounded-lg tracking-wide hover:bg-yellow-400 transition text-sm md:text-base">
+      LOG IN
+    </button>
+  </Link>
+
+{/* signup button */}
+  <Link href="/signup">
+    <button className="px-3 md:px-6 py-2 rounded-lg text-white tracking-wide bg-gradient-to-r from-[#6b4bc3] to-[#7f5bd6] shadow-md hover:opacity-90 transition text-sm md:text-base">
+      GET STARTED
+    </button>
+  </Link>
 
 
-{/* sign up button */}
- <Link href="/signup">
-   <button className="px-6 py-2 rounded-lg text-white tracking-wide bg-gradient-to-r from-[#6b4bc3] to-[#7f5bd6] shadow-md hover:opacity-90 transition">
-     GET STARTED
-   </button>
- </Link>
-
-
-{/* opens search*/}
+{/* search bar for neighborhood navigation */}
 </div>
        </div>
        </header>
 
 
    {searchOpen && (
- <div className="w-full bg-white border-b shadow-sm p-4 flex justify-center">
-   <input
-     type="text"
-     placeholder="Search events, food locations..."
-     value={searchQuery}
-     onChange={(e) => setSearchQuery(e.target.value)}
-     className="w-full max-w-xl border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#6942b5]"
-   />
- </div>
+  <div className="w-full bg-white border-b shadow-sm p-4 flex justify-center relative z-30">
+    <div className="w-full max-w-xl flex gap-2">
+      <input
+        type="text"
+        placeholder="Search a neighborhood or borough..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            handleAreaSearch();
+          }
+        }}
+        className="flex-1 border text-black rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#6942b5]"
+      />
+
+      <button
+        onClick={handleAreaSearch}
+        className="bg-[#6942b5] text-white px-4 py-2 rounded-md hover:bg-[#5a34a0] transition"
+      >
+        Go
+      </button>
+    </div>
+  </div>
 )}
 
 
@@ -149,7 +213,7 @@ useEffect(() => {
 
 {/* menu logo */}
      <div className="flex items-center justify-between mb-8">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="https://www.foodhelpline.org/" className="flex items-center gap-2">
    <img
      src="/logo_icon.svg"
      alt="Lemontree icon"
@@ -171,7 +235,7 @@ useEffect(() => {
 
 {/* menu links */}
 <nav className="flex flex-col text-lg">
- <Link href="/" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
+ <Link href="/dashboard" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
    Welcome
  </Link>
 
@@ -198,10 +262,7 @@ useEffect(() => {
 
 
 </button>
-
-
-
-
+{/* dropdown links */}
  {eventsOpen && (
    <div className="ml-4 flex flex-col text-sm">
 
@@ -237,37 +298,23 @@ useEffect(() => {
 </div>
 
 
- <Link href="/how-it-works" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
+ <Link href="/flyer" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
    Flyer Generator
  </Link>
 
 
- <Link href="/volunteer" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
+ <Link href="/leaderboard" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
    Community Leaderboard
  </Link>
 
 
- <Link href="/about" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
+ <Link href="/profile" className="px-3 py-2 rounded-md text-black hover:bg-gray-100 transition">
    My Profile
  </Link>
 
 
 </nav>
 
-
-
-
-{/* bottom buttons */}
-     <div className="mt-auto flex flex-col gap-4">
-       <button className="bg-[#6942b5] text-white py-3 rounded-lg">
-         Donate
-       </button>
-
-
-       <button className="border border-[#06bcb1] text-[#06bcb1] py-3 rounded-lg">
-         Share
-       </button>
-     </div>
 
 
    </div>
@@ -338,7 +385,7 @@ useEffect(() => {
               fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5,
               padding: "2px 8px", borderRadius: 99,
               background: selectedResource.resourceType?.id === "SOUP_KITCHEN" ? "#fde8e2" : "#ede5f7",
-              color: selectedResource.resourceType?.id === "SOUP_KITCHEN" ? "#E86F51" : "#6942b5",
+              color: selectedResource.resourceType?.id === "SOUP_KITCHEN" ? "#fd5839" : "#6942b5",
             }}>
               {selectedResource.resourceType?.name ?? "Resource"}
             </span>
@@ -388,17 +435,19 @@ useEffect(() => {
 
 {/* Hero Section — pointer-events-none so clicks pass through to the map */}
     <section className="relative z-10 pointer-events-none max-w-5xl mx-auto flex flex-col items-center text-center py-32 px-6">
-         <h1 className="text-3xl md:text-4xl font-bold mb-4 text-[#6942b5]">
+         <h1 className="text-3xl md:text-4xl font-bold  mb-4 text-black">
            Welcome to Lemontree's Volunteer Hub
          </h1>
 
-         <p className="text-gray-600 mb-6 max-w-xl">
+         <p className="text-black mb-6 max-w-xl">
            Help connect communities to nearby food resources
          </p>
 
-         <button className="pointer-events-auto bg-[#6942b5] text-white px-6 py-3 rounded-full hover:bg-[#5a34a0] transition">
-           Start Volunteering
-         </button>
+      <Link href="/events" className="pointer-events-auto">
+  <button className="bg-[#6942b5] text-white px-6 py-3 rounded-full hover:bg-[#5a34a0] transition">
+    Start Volunteering
+  </button>
+</Link>
        </section>
      </div>
 
@@ -408,31 +457,23 @@ useEffect(() => {
 
 
  {/* ABOUT US */}
- <div className="bg-[#06bcb1] text-white rounded-xl shadow-lg p-8 flex flex-col justify-between">
+ <div className="bg-[#06bcb1] text-white rounded-xl shadow-lg p-8 flex flex-col justify-between min-h-[320px]">
+  <div>
+    <h3 className="text-xl font-bold mb-3">About Us</h3>
 
+    <p className="text-sm opacity-90 leading-relaxed">
+      Learn about Lemontree's mission to connect communities with
+      nearby food resources and empower volunteers to make a
+      meaningful impact.
+    </p>
+  </div>
 
-   <div>
-     <h3 className="text-xl font-bold mb-3">About Us</h3>
-
-
-     <p className="text-sm opacity-90">
-       Learn about Lemontree's mission to connect communities with
-       nearby food resources and empower volunteers to make a
-       meaningful impact.
-     </p>
-   </div>
-
-
-   <Link href="https://www.foodhelpline.org/about">
-     <button className="bg-[#77d1cb] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#77d1cb] transition">
-           Learn More
-         </button>
-
-
-   </Link>
-
-
- </div>
+  <Link href="https://www.foodhelpline.org/about" className="mt-8">
+    <button className="bg-[#77d1cb] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#06bcb1] transition">
+      Learn More
+    </button>
+  </Link>
+</div>
 
 
 
