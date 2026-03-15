@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Copy, ChevronDown, Check, AlertCircle, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronDown, Check, AlertCircle, X } from 'lucide-react';
 import MapGL, { Marker, MapRef } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -115,9 +116,6 @@ function Dropdown({ value, onChange, placeholder, options }: {
     </div>
   );
 }
-
-// ─── Map ───────────────────────────────────────────────────────────────────────
-// LocationMap is defined inside the page component so it can access page state.
 
 // ─── Card ──────────────────────────────────────────────────────────────────────
 function Card({ accent, bg, title, children }: { accent:string; bg:string; title:string; children:React.ReactNode }) {
@@ -248,15 +246,24 @@ const INIT: Form = {
   visibility: 'private',
 };
 
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+function getInitials(name: string) {
+  if (!name) return 'V';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length-1][0]}`.toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function CreateEventPage() {
+  const router = useRouter();
   const [form, setForm]               = useState<Form>(INIT);
-  const [copied, setCopied]           = useState(false);
   const [busy, setBusy]               = useState(false);
   const [err, setErr]                 = useState<string|null>(null);
   const [ok, setOk]                   = useState(false);
-  const [createdEventId, setCreatedEventId] = useState('');
   const [geocodedCoords, setGeocodedCoords] = useState<{lat:number;lng:number}|null>(null);
+  const [userState, setUserState]     = useState({name:'', initials:''});
+  const [userLoading, setUserLoading] = useState(true);
 
   // Location autocomplete
   const [locationSuggestions, setLocationSuggestions] = useState<{display_name:string;lat:string;lon:string}[]>([]);
@@ -268,10 +275,6 @@ export default function CreateEventPage() {
   const mapRef = useRef<MapRef>(null);
   const [mapMarkers, setMapMarkers] = useState<{id:string;lng:number;lat:number;type:string}[]>([]);
   const [viewState, setViewState] = useState({longitude:-73.9857,latitude:40.7128,zoom:12});
-
-  const shareLink = createdEventId
-    ? `${typeof window !== 'undefined' ? window.location.host : 'lemontree.app'}/events/${createdEventId}`
-    : 'lemontree.app/events/<event-id>';
 
   const ch = (e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) =>
     setForm(p => ({...p, [e.target.name]: e.target.value}));
@@ -342,15 +345,35 @@ export default function CreateEventPage() {
     }
   }, [geocodedCoords]);
 
-  const copy = useCallback(() => {
-    const url = `https://${shareLink}`;
-    navigator.clipboard?.writeText(url).catch(() => {
-      const el = document.createElement('textarea');
-      el.value = url; document.body.appendChild(el); el.select();
-      document.execCommand('copy'); document.body.removeChild(el);
-    });
-    setCopied(true); setTimeout(() => setCopied(false), 2500);
-  }, [shareLink]);
+  // Load current user for header
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) { setUserLoading(false); return; }
+    (async () => {
+      try {
+        let name = 'Volunteer';
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const meta = payload?.user_metadata;
+        if (typeof meta?.name === 'string') {
+          name = meta.name;
+        } else {
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+          const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+          if (supabaseUrl) {
+            const r = await fetch(`${supabaseUrl}/auth/v1/user`, {
+              headers: { Authorization: `Bearer ${token}`, apikey: supabaseKey },
+            });
+            if (r.ok) {
+              const d = await r.json();
+              if (d?.user_metadata?.name) name = d.user_metadata.name;
+            }
+          }
+        }
+        setUserState({name, initials: getInitials(name)});
+      } catch { /* ignore */ }
+      finally { setUserLoading(false); }
+    })();
+  }, []);
 
   async function submit() {
     if (!form.title.trim()) { setErr('Please add an event title.'); return; }
@@ -383,8 +406,8 @@ export default function CreateEventPage() {
           title:           form.title,
           description:     form.description,
           date:            form.date,
-          start_time:      form.startTime,
-          end_time:        form.endTime,
+          start_time:      form.date && form.startTime ? `${form.date}T${form.startTime}:00` : '',
+          end_time:        form.date && form.endTime   ? `${form.date}T${form.endTime}:00`   : '',
           location_name:   form.locationAddress,
           latitude:        latitude,
           longitude:       longitude,
@@ -397,58 +420,23 @@ export default function CreateEventPage() {
         }),
       });
       if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.message||`Error ${res.status}`); }
-      const data = await res.json();
-      setCreatedEventId(data.id);
-      setOk(true); setForm(INIT); window.scrollTo({top:0,behavior:'smooth'});
+      setOk(true); setForm(INIT); setGeocodedCoords(null); window.scrollTo({top:0,behavior:'smooth'});
     } catch(e) { setErr(e instanceof Error ? e.message : 'Something went wrong.'); }
     finally { setBusy(false); }
   }
 
-  function LocationMap() {
-    return (
-      <div style={{position:'relative',width:'100%',height:250,borderRadius:5,border:`2px solid ${C.inputBorder}`,overflow:'hidden'}}>
-        <MapGL
-          ref={mapRef}
-          mapLib={maplibregl}
-          {...viewState}
-          onMove={e => setViewState(e.viewState)}
-          onMoveEnd={e => {
-            const b = e.target.getBounds();
-            loadMarkers({minLng:b.getWest(),minLat:b.getSouth(),maxLng:b.getEast(),maxLat:b.getNorth()});
-          }}
-          style={{width:'100%',height:'100%'}}
-          mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        >
-          {mapMarkers.map(m => (
-            <Marker key={m.id} longitude={m.lng} latitude={m.lat} anchor="center">
-              <div style={{
-                width:14,height:14,borderRadius:'50%',
-                border:'2px solid white',
-                background:m.type==='SOUP_KITCHEN'?'#E86F51':'#6942b5',
-                boxShadow:'0 1px 4px rgba(0,0,0,0.4)',
-              }} title={m.type==='SOUP_KITCHEN'?'Soup Kitchen':'Food Pantry'} />
-            </Marker>
-          ))}
-          {geocodedCoords && (
-            <Marker longitude={geocodedCoords.lng} latitude={geocodedCoords.lat} anchor="center">
-              <div style={{
-                width:18,height:18,borderRadius:'50%',
-                border:'3px solid white',
-                background:C.teal,
-                boxShadow:'0 2px 8px rgba(0,0,0,0.5)',
-              }} title="Event location" />
-            </Marker>
-          )}
-        </MapGL>
-        {!geocodedCoords && (
-          <div style={{position:'absolute',bottom:8,left:0,right:0,display:'flex',justifyContent:'center',pointerEvents:'none'}}>
-            <span style={{background:'rgba(255,255,255,0.88)',color:C.textMuted,fontSize:11,fontWeight:600,padding:'3px 10px',borderRadius:4}}>
-              Enter an address above to zoom in
-            </span>
-          </div>
-        )}
-      </div>
-    );
+  async function pickMarker(lng: number, lat: number) {
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        { headers: { 'User-Agent': 'lemontree-volunteer-app' } }
+      );
+      const d = await r.json();
+      const addr = d.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      setForm(p => ({...p, locationAddress: addr}));
+      setGeocodedCoords({lat, lng});
+      setShowSuggestions(false);
+    } catch { /* ignore */ }
   }
 
   return (
@@ -473,45 +461,30 @@ export default function CreateEventPage() {
           <Image src="/logo.svg" alt="Lemontree" width={42} height={42} priority />
           <Image src="/lemontree_text_logo.svg" alt="Lemontree" width={112} height={24} priority style={{filter:'brightness(0)'}} />
         </Link>
-        <div style={{display:'flex', alignItems:'center', gap:8, background:'rgba(45,42,38,0.12)',
-          padding:'6px 14px', borderRadius:999, fontSize:12, fontWeight:600,
-          textTransform:'uppercase', letterSpacing:'0.5px', color:'#2D2A26',
-          fontFamily:'var(--font-dm-sans)'}}>
-          <div style={{width:10, height:10, borderRadius:'50%', background:'#2D2A26', opacity:0.45}} />
-          User
-        </div>
+        <button type="button" onClick={() => router.push('/profile')} style={{
+          display:'flex', alignItems:'center', gap:8,
+          background:'rgba(45,42,38,0.12)', border:'none',
+          padding:'6px 14px', borderRadius:999, cursor:'pointer',
+          fontFamily:'var(--font-dm-sans)',
+        }}>
+          {userLoading ? (
+            <span className="lt-spinner" style={{width:20,height:20,borderTopColor:'rgba(45,42,38,0.5)'}} />
+          ) : (
+            <>
+              <div className="lt-avatar" style={{
+                width:28, height:28, borderRadius:'50%',
+                background:C.purple, color:'white',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:11, fontWeight:700, border:'2px solid rgba(0,0,0,0.1)',
+                flexShrink:0,
+              }}>{userState.initials || 'V'}</div>
+              <span style={{fontSize:13, fontWeight:600, color:'#2D2A26'}}>
+                {userState.name || 'Volunteer'}
+              </span>
+            </>
+          )}
+        </button>
       </header>
-
-      {/* ── Sticky top bar ── */}
-      <div style={{position:'sticky',top:0,zIndex:20,
-        background:'rgba(254,246,223,0.97)',backdropFilter:'blur(8px)',
-        borderBottom:`1px solid ${C.border}`,padding:'10px 32px',
-        display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-
-        <div style={{display:'flex',flexDirection:'column',gap:1}}>
-          <span style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:C.purple,lineHeight:1}}>Create</span>
-          <span style={{fontSize:17,fontWeight:700,color:C.text,lineHeight:1}}>New Event</span>
-        </div>
-
-        <div style={{display:'flex',gap:8,alignItems:'center'}}>
-          {['Save Draft','My Events'].map(label => (
-            <button key={label} type="button" style={{
-              padding:'8px 16px',fontSize:13,fontWeight:600,fontFamily:'var(--font-dm-sans)',
-              background:'rgba(255,255,255,0.7)',color:C.textSec,
-              border:`1.5px solid ${C.border}`,borderRadius:5,cursor:'pointer',whiteSpace:'nowrap',
-            }}>{label}</button>
-          ))}
-          <button type="button" onClick={submit} disabled={busy} style={{
-            padding:'9px 22px',fontSize:14,fontWeight:700,fontFamily:'var(--font-dm-sans)',
-            background:C.teal,color:'white',border:'none',borderRadius:5,
-            cursor:busy?'not-allowed':'pointer',opacity:busy?0.65:1,
-            display:'flex',alignItems:'center',gap:7,
-            boxShadow:`0 2px 10px ${C.teal}55`,whiteSpace:'nowrap',
-          }}>
-            {busy ? <><span className="lt-spinner" style={{width:14,height:14}}/>Creating…</> : 'Create Event'}
-          </button>
-        </div>
-      </div>
 
       {/* ── Main content ── */}
       <div style={{maxWidth:1160,margin:'0 auto',padding:'22px 32px 0'}}>
@@ -607,7 +580,55 @@ export default function CreateEventPage() {
                   )}
                 </div>
               </Field>
-              <LocationMap />
+              <div style={{position:'relative',width:'100%',height:250,borderRadius:5,border:`2px solid ${C.inputBorder}`,overflow:'hidden'}}>
+                <MapGL
+                  ref={mapRef}
+                  mapLib={maplibregl}
+                  {...viewState}
+                  onMove={e => setViewState(e.viewState)}
+                  onMoveEnd={e => {
+                    const b = e.target.getBounds();
+                    loadMarkers({minLng:b.getWest(),minLat:b.getSouth(),maxLng:b.getEast(),maxLat:b.getNorth()});
+                  }}
+                  style={{width:'100%',height:'100%'}}
+                  mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+                >
+                  {mapMarkers.map(m => (
+                    <Marker key={m.id} longitude={m.lng} latitude={m.lat} anchor="center">
+                      <div
+                        onClick={() => pickMarker(m.lng, m.lat)}
+                        title={`${m.type==='SOUP_KITCHEN'?'Soup Kitchen':'Food Pantry'} — click to select`}
+                        style={{
+                          width:14,height:14,borderRadius:'50%',
+                          border:'2px solid white',
+                          background:m.type==='SOUP_KITCHEN'?'#E86F51':'#6942b5',
+                          boxShadow:'0 1px 4px rgba(0,0,0,0.4)',
+                          cursor:'pointer',
+                        }}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1.6)';}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1)';}}
+                      />
+                    </Marker>
+                  ))}
+                  {geocodedCoords && (
+                    <Marker longitude={geocodedCoords.lng} latitude={geocodedCoords.lat} anchor="center">
+                      <div style={{
+                        width:18,height:18,borderRadius:'50%',
+                        border:'3px solid white',
+                        background:C.teal,
+                        boxShadow:'0 2px 8px rgba(0,0,0,0.5)',
+                      }} title="Event location" />
+                    </Marker>
+                  )}
+                </MapGL>
+                {!geocodedCoords && (
+                  <div style={{position:'absolute',bottom:8,left:0,right:0,display:'flex',justifyContent:'center',pointerEvents:'none'}}>
+                    <span style={{background:'rgba(255,255,255,0.88)',color:C.textMuted,fontSize:11,fontWeight:600,padding:'3px 10px',borderRadius:4}}>
+                      Type an address or click a dot to select a location
+                    </span>
+                  </div>
+                )}
+              </div>
             </Card>
 
             <Card accent={C.purple} bg={C.tealCard} title="Flyer">
@@ -640,39 +661,6 @@ export default function CreateEventPage() {
               </p>
             </Card>
 
-          </div>
-        </div>
-
-        {/* ── Shareable link — full width ── */}
-        <div style={{marginTop:16,borderRadius:7,overflow:'hidden',border:'1px solid rgba(0,0,0,0.07)',boxShadow:'0 1px 5px rgba(0,0,0,0.05)'}}>
-          <div style={{background:C.teal,padding:'9px 18px',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.8px',color:'white'}}>
-            Shareable Link
-          </div>
-          <div style={{background:C.tealCard,padding:'14px 18px'}}>
-            <p style={{fontSize:13,color:C.textSec,margin:'0 0 10px 0'}}>
-              {createdEventId
-                ? 'Share this link with volunteers to let them sign up.'
-                : 'Your shareable link will appear here after the event is created.'}
-            </p>
-            <div style={{display:'flex',gap:10}}>
-              <div style={{flex:1,display:'flex',alignItems:'center',gap:8,background:C.inputBg,
-                border:`2px solid ${C.inputBorder}`,borderRadius:5,padding:'0 14px',height:42,overflow:'hidden'}}>
-                <span style={{fontSize:12,fontWeight:700,color:'#9b7fd4',flexShrink:0}}>https://</span>
-                <span style={{fontSize:13,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',
-                  whiteSpace:'nowrap',color:createdEventId?C.text:'#a89bc7'}}>{shareLink}</span>
-              </div>
-              <button type="button" onClick={copy} disabled={!createdEventId} style={{
-                height:42,padding:'0 20px',borderRadius:5,cursor:createdEventId?'pointer':'not-allowed',
-                fontSize:13,fontWeight:700,fontFamily:'var(--font-dm-sans)',
-                display:'flex',alignItems:'center',gap:7,flexShrink:0,transition:'all 0.2s',
-                background:copied?C.tealLight:C.purpleLight,
-                color:copied?C.teal:C.purple,
-                border:`2px solid ${copied?C.teal+'66':C.inputBorder}`,
-                opacity:createdEventId?1:0.5,
-              }}>
-                {copied ? <><Check size={14}/>Copied!</> : <><Copy size={14}/>Copy Link</>}
-              </button>
-            </div>
           </div>
         </div>
 
