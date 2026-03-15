@@ -58,7 +58,7 @@ const COORDS: Record<string, [number, number]> = {
 const IB: React.CSSProperties = {
   width:'100%', padding:'10px 13px', fontSize:'14px',
   fontFamily:'var(--font-dm-sans)', color: C.text,
-  background: '#fdf0e8', border:'2px solid #e0bfb0',
+  background: '#fdf0e8', borderWidth: '2px', borderStyle: 'solid', borderColor: '#e0bfb0',
   borderRadius:'5px', outline:'none', boxSizing:'border-box' as const,
   transition:'border-color 0.15s, box-shadow 0.15s',
 };
@@ -116,14 +116,14 @@ function Dropdown({ value, onChange, placeholder, options, groupedOptions }: {
             <input ref={inp} type="text" value={search} onChange={e=>setSearch(e.target.value)}
               placeholder="Search…" style={{...IB,padding:'6px 10px',fontSize:13}} />
           </div>
-          <ul style={{maxHeight:210,overflowY:'auto',margin:0,padding:0,listStyle:'none'}}>
+          <ul style={{maxHeight:350,overflowY:'auto',margin:0,padding:0,listStyle:'none'}}>
             {groups?.length===0 && <li style={{padding:'8px 16px',fontSize:13,color:C.textMuted}}>No results</li>}
             {groups?.map(([group,items]) => (
               <li key={group}>
                 <div style={{padding:'6px 12px',fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.8px',color:'#784cc5',background:'#f2d1be'}}>{group}</div>
                 {items.map(item => (
                   <button key={item} type="button" onClick={() => pick(item)}
-                    style={{width:'100%',textAlign:'left',padding:'8px 16px',fontSize:13,display:'block',border:'none',cursor:'pointer',fontFamily:'var(--font-dm-sans)',
+                    style={{width:'100%',textAlign:'left',padding:'8px 16px',fontSize:13,display:'block',borderWidth:0,cursor:'pointer',fontFamily:'var(--font-dm-sans)',
                       background:value===item?'#ede5f7':'white', color:value===item?'#784cc5':C.text, fontWeight:value===item?600:400}}
                     onMouseEnter={e=>{if(value!==item)(e.currentTarget as HTMLElement).style.background='#F9F5FF';}}
                     onMouseLeave={e=>{if(value!==item)(e.currentTarget as HTMLElement).style.background='white';}}
@@ -134,7 +134,7 @@ function Dropdown({ value, onChange, placeholder, options, groupedOptions }: {
             {flat?.length===0 && <li style={{padding:'8px 16px',fontSize:13,color:C.textMuted}}>No results</li>}
             {flat?.map(opt => (
               <button key={opt} type="button" onClick={() => pick(opt)}
-                style={{width:'100%',textAlign:'left',padding:'8px 16px',fontSize:13,display:'block',border:'none',cursor:'pointer',fontFamily:'var(--font-dm-sans)',
+                style={{width:'100%',textAlign:'left',padding:'8px 16px',fontSize:13,display:'block',borderWidth:0,cursor:'pointer',fontFamily:'var(--font-dm-sans)',
                   background:value===opt?'#ede5f7':'white', color:value===opt?'#784cc5':C.text, fontWeight:value===opt?600:400}}
                 onMouseEnter={e=>{if(value!==opt)(e.currentTarget as HTMLElement).style.background='#F9F5FF';}}
                 onMouseLeave={e=>{if(value!==opt)(e.currentTarget as HTMLElement).style.background='white';}}
@@ -167,9 +167,9 @@ function Map({ neighborhood }: { neighborhood: string }) {
 // ─── Card ──────────────────────────────────────────────────────────────────────
 function Card({ accent, bg, title, children }: { accent:string; bg:string; title:string; children:React.ReactNode }) {
   return (
-    <div style={{borderRadius:7,overflow:'hidden',border:'1px solid rgba(0,0,0,0.07)',boxShadow:'0 1px 5px rgba(0,0,0,0.05)',height:'100%',display:'flex',flexDirection:'column'}}>
-      <div style={{background:accent,padding:'9px 18px',fontSize:11,fontWeight:700,textTransform:'uppercase' as const,letterSpacing:'0.8px',color:'white',flexShrink:0}}>{title}</div>
-      <div style={{background:bg,padding:'16px 18px',flex:1}}>{children}</div>
+    <div style={{borderRadius:7,border:'1px solid rgba(0,0,0,0.07)',boxShadow:'0 1px 5px rgba(0,0,0,0.05)',height:'100%',display:'flex',flexDirection:'column'}}>
+      <div style={{background:accent,padding:'9px 18px',fontSize:11,fontWeight:700,textTransform:'uppercase' as const,letterSpacing:'0.8px',color:'white',flexShrink:0, borderTopLeftRadius: 6, borderTopRightRadius: 6}}>{title}</div>
+      <div style={{background:bg,padding:'16px 18px',flex:1, borderBottomLeftRadius: 6, borderBottomRightRadius: 6}}>{children}</div>
     </div>
   );
 }
@@ -503,9 +503,10 @@ export default function CreateEventPage() {
             <Card accent={C.purple} bg={C.tealCard} title="Visibility">
               <div style={{display:'flex',gap:10,marginBottom:10}}>
                 {(['Public','Private'] as const).map(opt => {
-                  const active = (opt==='Private') === form.visibility === 'private';
+                  const val = opt.toLowerCase() as 'public' | 'private';
+                  const active = form.visibility === val;
                   return (
-                    <button key={opt} type="button" onClick={()=>setForm(p=>({...p,isPrivate:opt==='Private'}))}
+                    <button key={opt} type="button" onClick={()=>setForm(p=>({...p,visibility:val}))}
                       style={{flex:1,padding:'10px',fontSize:13,fontWeight:700,fontFamily:'var(--font-dm-sans)',
                         borderRadius:5,cursor:'pointer',transition:'all 0.15s',
                         background:active?C.purple:C.inputBg,color:active?'white':'#9b7fd4',
