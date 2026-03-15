@@ -1,0 +1,50 @@
+.welcomeMain {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+}
+
+.sidebarToggle {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 9999px;
+  background: #6942b5;
+  color: white;
+  font-size: 28px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  z-index: 1100;
+}
+
+.sidebarToggle:hover {
+  background: #06897a;
+}
+
+.headerToggle:hover {
+  background: #06897a;
+  
+}
+
+.headerToggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 30px;
+}
+
+.headerToggle:hover {
+  background: #06897a;
+}

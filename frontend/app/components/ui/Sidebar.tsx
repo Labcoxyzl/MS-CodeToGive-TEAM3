@@ -4,7 +4,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
-  {
+  
+    {
+  label: "Welcome",
+  href: "/welcome",
+  icon: (
+    <svg className="lt-sidebar__icon" viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M10 2a8 8 0 100 16 8 8 0 000-16zm6 8a5.978 5.978 0 01-1.528 3.988A7.96 7.96 0 0013 10a7.96 7.96 0 001.472-3.988A5.978 5.978 0 0116 10zM10 4c.9 1.1 1.5 2.5 1.5 4S10.9 10.9 10 12c-.9-1.1-1.5-2.5-1.5-4S9.1 5.1 10 4zM4 10c0-1.5.56-2.87 1.528-3.988A7.96 7.96 0 007 10a7.96 7.96 0 00-1.472 3.988A5.978 5.978 0 014 10zm6 6c-.9-1.1-1.5-2.5-1.5-4S9.1 9.1 10 8c.9 1.1 1.5 2.5 1.5 4S10.9 14.9 10 16z"
+        clipRule="evenodd"
+      />
+    </svg>
+  ),
+},
+{
     label: "Dashboard",
     href: "/dashboard",
     icon: (
