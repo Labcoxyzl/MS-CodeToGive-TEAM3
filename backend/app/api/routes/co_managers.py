@@ -30,7 +30,7 @@ class CoManagerResponse(BaseModel):
 def _require_leader(event_id: str, user_id: str, db) -> None:
     """Raise 403 if user is not the event leader (only leader can manage co-managers)."""
     event = db.table("events").select("event_leader_id").eq("id", event_id).maybe_single().execute()
-    if not event.data:
+    if not event or not event.data:
         raise HTTPException(status_code=404, detail="Event not found")
     if event.data["event_leader_id"] != user_id:
         raise HTTPException(status_code=403, detail="Only the event leader can manage co-managers")
@@ -45,7 +45,7 @@ async def list_co_managers(event_id: str, current_user: CurrentUser):
 
     # Verify event exists
     event = db.table("events").select("event_leader_id").eq("id", event_id).maybe_single().execute()
-    if not event.data:
+    if not event or not event.data:
         raise HTTPException(status_code=404, detail="Event not found")
 
     user_id = current_user["sub"]
@@ -60,7 +60,7 @@ async def list_co_managers(event_id: str, current_user: CurrentUser):
             .maybe_single()
             .execute()
         )
-        if not co_check.data:
+        if not co_check or not co_check.data:
             raise HTTPException(status_code=403, detail="Not authorised")
 
     rows = (
@@ -76,8 +76,8 @@ async def list_co_managers(event_id: str, current_user: CurrentUser):
         user = db.table("users").select("name, email").eq("id", row["user_id"]).maybe_single().execute()
         enriched.append({
             **row,
-            "name": user.data["name"] if user.data else None,
-            "email": user.data["email"] if user.data else None,
+            "name": user.data["name"] if user and user.data else None,
+            "email": user.data["email"] if user and user.data else None,
         })
 
     return enriched
@@ -98,14 +98,14 @@ async def add_co_manager(event_id: str, body: AddCoManagerRequest, current_user:
     else:
         user_result = db.table("users").select("id, name, email").eq("email", body.email).maybe_single().execute()
 
-    if not user_result.data:
+    if not user_result or not user_result.data:
         raise HTTPException(status_code=404, detail="No platform account found for that user")
 
     target_user = user_result.data
 
     # Cannot promote the leader themselves
     event = db.table("events").select("event_leader_id").eq("id", event_id).maybe_single().execute()
-    if event.data["event_leader_id"] == target_user["id"]:
+    if event and event.data and event.data["event_leader_id"] == target_user["id"]:
         raise HTTPException(status_code=422, detail="Event leader is already the primary manager")
 
     # Check for duplicate
