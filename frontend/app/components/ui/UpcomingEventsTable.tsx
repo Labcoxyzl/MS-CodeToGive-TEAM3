@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { UpcomingEvent } from "@/app/dashboard/mockData";
+import EventModal from "./EventModal";
 
 interface UpcomingEventsTableProps {
   events: UpcomingEvent[];
@@ -16,8 +17,11 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function UpcomingEventsTable({ events }: UpcomingEventsTableProps) {
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
   return (
-    <div className="lt-panel">
+    <>
+      <div className="lt-panel">
       <h2 className="lt-section-title">Upcoming Events</h2>
       <table className="lt-table">
         <thead>
@@ -29,7 +33,12 @@ export default function UpcomingEventsTable({ events }: UpcomingEventsTableProps
         </thead>
         <tbody>
           {events.map((event) => (
-            <tr key={event.id}>
+            <tr
+              key={event.id}
+              onClick={() => setSelectedEventId(event.id)}
+              style={{ cursor: "pointer" }}
+              title="Click to view details"
+            >
               <td>
                 <div style={{ fontWeight: 600 }}>{event.title}</div>
                 <div style={{ fontSize: 13, color: "var(--lt-text-muted)", marginTop: 2 }}>
@@ -44,11 +53,15 @@ export default function UpcomingEventsTable({ events }: UpcomingEventsTableProps
           ))}
         </tbody>
       </table>
-      <div style={{ marginTop: 16, textAlign: "center" }}>
-        <Link href="/events" className="lt-btn lt-btn--outline" style={{ width: "100%" }}>
-          + Attend Event
-        </Link>
-      </div>
     </div>
+
+    {/* Event Modal Overlay */}
+    {selectedEventId && (
+      <EventModal
+        eventId={selectedEventId}
+        onClose={() => setSelectedEventId(null)}
+      />
+    )}
+    </>
   );
 }

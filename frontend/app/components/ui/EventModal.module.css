@@ -1,0 +1,192 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  background: var(--lt-card-bg-white);
+  border-radius: var(--lt-radius-md);
+  box-shadow: var(--lt-shadow-card);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
+.closeButton {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--lt-text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--lt-transition);
+  z-index: 10;
+}
+
+.closeButton:hover {
+  background: var(--lt-card-bg-muted);
+  color: var(--lt-text-primary);
+}
+
+.modalHeader {
+  padding: 24px 32px 16px;
+  border-bottom: 1px solid var(--lt-border);
+}
+
+.modalTitle {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--lt-text-primary);
+  margin: 0 0 8px;
+  padding-right: 32px; /* space for close button */
+}
+
+.modalDate {
+  font-size: 15px;
+  color: var(--lt-teal);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modalBody {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lt-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.description {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--lt-text-primary);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: var(--lt-card-bg-muted);
+  padding: 16px;
+  border-radius: var(--lt-radius-sm);
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoLabel {
+  font-size: 13px;
+  color: var(--lt-text-secondary);
+}
+
+.infoValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--lt-text-primary);
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.photoWrap {
+  position: relative;
+  aspect-ratio: 4/3;
+  border-radius: var(--lt-radius-sm);
+  overflow: hidden;
+  background: var(--lt-card-bg-muted);
+}
+
+.photoCaption {
+  font-size: 12px;
+  color: var(--lt-text-secondary);
+  margin-top: 4px;
+  text-align: center;
+}
+
+.modalFooter {
+  padding: 24px 32px;
+  border-top: 1px solid var(--lt-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  background: var(--lt-card-bg-white);
+  border-radius: 0 0 var(--lt-radius-md) var(--lt-radius-md);
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.02);
+}
+
+.attendBtn {
+  width: 100%;
+}
+
+@media (min-width: 500px) {
+  .attendBtn {
+    width: auto;
+    min-width: 200px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
