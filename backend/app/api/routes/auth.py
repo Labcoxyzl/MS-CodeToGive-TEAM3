@@ -116,7 +116,10 @@ async def sign_up(body: SignUpRequest):
 @router.post("/login")
 async def log_in(body: LoginRequest):
     client = get_supabase_client()
-    response = client.auth.sign_in_with_password({"email": body.email, "password": body.password})
+    try:
+        response = client.auth.sign_in_with_password({"email": body.email, "password": body.password})
+    except AuthApiError:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     if response.user is None:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {
