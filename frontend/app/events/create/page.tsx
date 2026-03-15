@@ -28,7 +28,7 @@ const C = {
 };
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
-const LANGUAGES = ['English', 'Spanish'];
+const LANGUAGES = ['English','Spanish','Chinese (Simplified)','Chinese (Traditional)','Bengali','Russian','Haitian Creole','Korean','Arabic','Urdu','Polish','Yiddish','French','Tagalog','Italian','Portuguese','Hindi','Japanese','Greek','Albanian','Other'];
 const VOL_OPTIONS = ['5','10','15','20','25','30','40','50','Unlimited'];
 
 // ─── Input helpers ─────────────────────────────────────────────────────────────
