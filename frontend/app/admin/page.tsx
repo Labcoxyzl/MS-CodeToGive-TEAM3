@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
 import StatsCard from "@/app/components/ui/StatsCard";
 import { apiFetch } from "@/app/lib/api";
+import SignupDetailsDrawer from "@/app/admin/SignupDetailsDrawer";
 import styles from "./admin.module.css";
 
 type Tab = "overview" | "users" | "events";
@@ -34,6 +35,35 @@ interface EventRow {
   volunteer_limit?: number;
 }
 
+interface SignupRow {
+  id: string;
+  event_id: string;
+  user_id: string | null;
+  guest_signup_id: string | null;
+  status: string;
+  signed_up_at: string;
+  checked_in_at: string | null;
+  referred_by_code: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  is_guest: boolean;
+  user_role: string | null;
+  user_category: string | null;
+  event_title: string | null;
+  event_date: string | null;
+  event_location: string | null;
+  event_latitude: number | null;
+  event_longitude: number | null;
+  event_start_time: string | null;
+  event_end_time: string | null;
+}
+
+interface EventOption {
+  id: string;
+  title: string;
+}
+
 interface Toast {
   message: string;
   type: "success" | "error";
@@ -48,7 +78,7 @@ function getInitials(name: string) {
   return parts[0].substring(0, 2).toUpperCase();
 }
 
-function formatDate(dateStr?: string) {
+function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
@@ -71,6 +101,7 @@ export default function AdminPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalEvents, setTotalEvents] = useState(0);
   const [totalSignups, setTotalSignups] = useState(0);
+  const [totalAttended, setTotalAttended] = useState(0);
   const [rolesBreakdown, setRolesBreakdown] = useState<Record<string, number>>({});
 
   // Users
@@ -86,6 +117,20 @@ export default function AdminPage() {
   const [eventsTotal, setEventsTotal] = useState(0);
   const [eventsPage, setEventsPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState("");
+
+  // Signups
+  const [signups, setSignups] = useState<SignupRow[]>([]);
+  const [signupsTotal, setSignupsTotal] = useState(0);
+  const [signupsPage, setSignupsPage] = useState(0);
+  const [signupSearch, setSignupSearch] = useState("");
+  const [signupEventFilter, setSignupEventFilter] = useState("");
+  const [signupStatusFilter, setSignupStatusFilter] = useState("");
+  const [signupDateFrom, setSignupDateFrom] = useState("");
+  const [signupDateTo, setSignupDateTo] = useState("");
+  const [eventOptions, setEventOptions] = useState<EventOption[]>([]);
+  const [selectedSignup, setSelectedSignup] = useState<SignupRow | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const signupSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // UI state
   const [deleteTarget, setDeleteTarget] = useState<EventRow | null>(null);
@@ -109,6 +154,7 @@ export default function AdminPage() {
     setTotalUsers(data.total_users ?? 0);
     setTotalEvents(data.total_events ?? 0);
     setTotalSignups(data.total_signups ?? 0);
+    setTotalAttended(data.total_attended ?? 0);
     setRolesBreakdown(data.roles_breakdown ?? {});
   }, []);
 
@@ -136,6 +182,42 @@ export default function AdminPage() {
     setEventsTotal(data.total ?? 0);
   }, []);
 
+  // Fetch signups
+  const fetchSignups = useCallback(async (
+    page: number,
+    search: string = "",
+    eventId: string = "",
+    signupStatus: string = "",
+    dateFrom: string = "",
+    dateTo: string = "",
+  ) => {
+    const skip = page * PAGE_SIZE;
+    const params = new URLSearchParams();
+    params.set("skip", String(skip));
+    params.set("limit", String(PAGE_SIZE));
+    if (search) params.set("search", search);
+    if (eventId) params.set("event_id", eventId);
+    if (signupStatus) params.set("status", signupStatus);
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
+
+    const res = await apiFetch(`/admin/signups?${params.toString()}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    setSignups(data.signups ?? []);
+    setSignupsTotal(data.total ?? 0);
+  }, []);
+
+  // Fetch event options for the filter dropdown
+  const fetchEventOptions = useCallback(async () => {
+    const res = await apiFetch("/admin/events?skip=0&limit=200");
+    if (!res.ok) return;
+    const data = await res.json();
+    setEventOptions(
+      (data.events ?? []).map((e: EventRow) => ({ id: e.id, title: e.title }))
+    );
+  }, []);
+
   // Initial load
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -156,11 +238,11 @@ export default function AdminPage() {
 
     async function init() {
       await fetchAnalytics();
-      await Promise.all([fetchUsers(0), fetchEvents(0)]);
+      await Promise.all([fetchUsers(0), fetchEvents(0), fetchSignups(0), fetchEventOptions()]);
       setLoading(false);
     }
     init();
-  }, [router, fetchAnalytics, fetchUsers, fetchEvents]);
+  }, [router, fetchAnalytics, fetchUsers, fetchEvents, fetchSignups, fetchEventOptions]);
 
   // Role update
   async function handleRoleChange(userId: string, newRole: Role) {
@@ -212,7 +294,7 @@ export default function AdminPage() {
     }
   }
 
-  // Search handler with debounce
+  // Search handler with debounce (users)
   function handleSearchChange(value: string) {
     setSearchTerm(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -222,7 +304,7 @@ export default function AdminPage() {
     }, 400);
   }
 
-  // Status filter handler
+  // Status filter handler (events)
   function handleStatusFilterChange(value: string) {
     setStatusFilter(value);
     setEventsPage(0);
@@ -238,6 +320,93 @@ export default function AdminPage() {
   function handleEventsPageChange(page: number) {
     setEventsPage(page);
     fetchEvents(page, statusFilter);
+  }
+
+  // Signup search with debounce
+  function handleSignupSearchChange(value: string) {
+    setSignupSearch(value);
+    if (signupSearchTimerRef.current) clearTimeout(signupSearchTimerRef.current);
+    signupSearchTimerRef.current = setTimeout(() => {
+      setSignupsPage(0);
+      fetchSignups(0, value, signupEventFilter, signupStatusFilter, signupDateFrom, signupDateTo);
+    }, 400);
+  }
+
+  function applySignupFilters(
+    eventId?: string,
+    sStatus?: string,
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
+    const eid = eventId ?? signupEventFilter;
+    const ss = sStatus ?? signupStatusFilter;
+    const df = dateFrom ?? signupDateFrom;
+    const dt = dateTo ?? signupDateTo;
+    setSignupsPage(0);
+    fetchSignups(0, signupSearch, eid, ss, df, dt);
+  }
+
+  function handleSignupsPageChange(page: number) {
+    setSignupsPage(page);
+    fetchSignups(page, signupSearch, signupEventFilter, signupStatusFilter, signupDateFrom, signupDateTo);
+  }
+
+  // CSV export
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (signupSearch) params.set("search", signupSearch);
+      if (signupEventFilter) params.set("event_id", signupEventFilter);
+      if (signupStatusFilter) params.set("status", signupStatusFilter);
+      if (signupDateFrom) params.set("date_from", signupDateFrom);
+      if (signupDateTo) params.set("date_to", signupDateTo);
+
+      const res = await apiFetch(`/admin/signups/export?${params.toString()}`);
+      if (!res.ok) {
+        showToast("Failed to export CSV", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `signups_export_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast("CSV exported successfully", "success");
+    } catch {
+      showToast("Network error during export", "error");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // Signup status update (from drawer)
+  async function handleUpdateSignupStatus(signupId: string, newStatus: string) {
+    try {
+      const res = await apiFetch(`/admin/signups/${signupId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setSignups((prev) =>
+          prev.map((s) => (s.id === signupId ? { ...s, status: newStatus } : s))
+        );
+        if (selectedSignup?.id === signupId) {
+          setSelectedSignup((prev) => prev ? { ...prev, status: newStatus } : null);
+        }
+        fetchAnalytics();
+        showToast("Signup status updated", "success");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || "Failed to update status", "error");
+      }
+    } catch {
+      showToast("Network error", "error");
+    }
   }
 
   if (!isAuthorized) return null;
@@ -275,6 +444,7 @@ export default function AdminPage() {
 
   const usersTotalPages = Math.ceil(usersTotal / PAGE_SIZE);
   const eventsTotalPages = Math.ceil(eventsTotal / PAGE_SIZE);
+  const signupsTotalPages = Math.ceil(signupsTotal / PAGE_SIZE);
 
   return (
     <div className="lt-page" style={{ flexDirection: "row", alignItems: "stretch" }}>
@@ -381,49 +551,177 @@ export default function AdminPage() {
                     <StatsCard
                       icon={
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                         </svg>
                       }
-                      value={Object.keys(rolesBreakdown).length}
-                      label="Active Roles"
+                      value={totalAttended}
+                      label="Total Attended"
                       colorClass="lt-stat-card__icon--coral"
                     />
                   </div>
 
-                  {/* Roles Breakdown */}
-                  {Object.keys(rolesBreakdown).length > 0 && (
-                    <div className={styles.tablePanel} style={{ marginTop: 24 }}>
-                      <div className={styles.tablePanelHeader}>
-                        <h3 className={styles.tablePanelTitle}>Roles Breakdown</h3>
-                      </div>
-                      <div style={{ padding: "0 24px 24px", display: "flex", gap: 16, flexWrap: "wrap" }}>
-                        {Object.entries(rolesBreakdown).map(([role, count]) => (
-                          <div
-                            key={role}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                              padding: "12px 20px",
-                              background: "var(--lt-card-bg-muted)",
-                              borderRadius: "var(--lt-radius-sm)",
-                              minWidth: 140,
-                            }}
-                          >
-                            <span
-                              className={styles.roleBadge}
-                              data-role={role}
-                            >
-                              {role}
-                            </span>
-                            <span style={{ fontWeight: 700, fontSize: 20, color: "var(--lt-text-primary)" }}>
-                              {count}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                  {/* Signups Management */}
+                  <div className={styles.tablePanel} style={{ marginTop: 24 }}>
+                    <div className={styles.tablePanelHeader}>
+                      <h3 className={styles.tablePanelTitle}>All Signups</h3>
+                      <button
+                        className={styles.exportBtn}
+                        onClick={handleExportCsv}
+                        disabled={exporting}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                        {exporting ? "Exporting..." : "Export CSV"}
+                      </button>
                     </div>
-                  )}
+
+                    <div className={styles.filtersBar}>
+                      <input
+                        type="text"
+                        className={styles.searchInput}
+                        placeholder="Search name, email, or phone..."
+                        value={signupSearch}
+                        onChange={(e) => handleSignupSearchChange(e.target.value)}
+                      />
+                      <select
+                        className={styles.statusFilter}
+                        value={signupEventFilter}
+                        onChange={(e) => {
+                          setSignupEventFilter(e.target.value);
+                          applySignupFilters(e.target.value);
+                        }}
+                      >
+                        <option value="">All Events</option>
+                        {eventOptions.map((ev) => (
+                          <option key={ev.id} value={ev.id}>
+                            {ev.title}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={styles.statusFilter}
+                        value={signupStatusFilter}
+                        onChange={(e) => {
+                          setSignupStatusFilter(e.target.value);
+                          applySignupFilters(undefined, e.target.value);
+                        }}
+                      >
+                        <option value="">All Statuses</option>
+                        <option value="registered">Registered</option>
+                        <option value="attended">Attended</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                      <input
+                        type="date"
+                        className={styles.dateInput}
+                        value={signupDateFrom}
+                        onChange={(e) => {
+                          setSignupDateFrom(e.target.value);
+                          applySignupFilters(undefined, undefined, e.target.value);
+                        }}
+                        title="From date"
+                      />
+                      <input
+                        type="date"
+                        className={styles.dateInput}
+                        value={signupDateTo}
+                        onChange={(e) => {
+                          setSignupDateTo(e.target.value);
+                          applySignupFilters(undefined, undefined, undefined, e.target.value);
+                        }}
+                        title="To date"
+                      />
+                    </div>
+
+                    <div className={styles.tableScroll}>
+                      {signups.length === 0 ? (
+                        <div className={styles.emptyState}>No signups found.</div>
+                      ) : (
+                        <table className="lt-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Phone</th>
+                              <th>Event</th>
+                              <th>Date</th>
+                              <th>Status</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {signups.map((signup) => (
+                              <tr key={signup.id}>
+                                <td>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    <div className="lt-avatar lt-avatar--sm">
+                                      {getInitials(signup.name || "")}
+                                    </div>
+                                    <div>
+                                      <span style={{ fontWeight: 600 }}>{signup.name || "—"}</span>
+                                      {signup.is_guest && (
+                                        <span className={styles.guestBadge}>Guest</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ color: "var(--lt-text-secondary)" }}>
+                                  {signup.email || "—"}
+                                </td>
+                                <td style={{ color: "var(--lt-text-secondary)" }}>
+                                  {signup.phone || "—"}
+                                </td>
+                                <td style={{ fontWeight: 500 }}>
+                                  {signup.event_title || "—"}
+                                </td>
+                                <td style={{ color: "var(--lt-text-secondary)" }}>
+                                  {formatDate(signup.signed_up_at)}
+                                </td>
+                                <td>
+                                  <span className={styles.signupStatusBadge} data-status={signup.status}>
+                                    {signup.status}
+                                  </span>
+                                </td>
+                                <td>
+                                  <button
+                                    className={styles.viewBtn}
+                                    onClick={() => setSelectedSignup(signup)}
+                                  >
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                    {signupsTotal > PAGE_SIZE && (
+                      <div className={styles.pagination}>
+                        <span className={styles.paginationInfo}>
+                          Showing {signupsPage * PAGE_SIZE + 1}–
+                          {Math.min((signupsPage + 1) * PAGE_SIZE, signupsTotal)} of {signupsTotal}
+                        </span>
+                        <div className={styles.paginationBtns}>
+                          <button
+                            className={styles.pageBtn}
+                            disabled={signupsPage === 0}
+                            onClick={() => handleSignupsPageChange(signupsPage - 1)}
+                          >
+                            Previous
+                          </button>
+                          <button
+                            className={styles.pageBtn}
+                            disabled={signupsPage >= signupsTotalPages - 1}
+                            onClick={() => handleSignupsPageChange(signupsPage + 1)}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -628,6 +926,7 @@ export default function AdminPage() {
                   )}
                 </div>
               )}
+
             </>
           )}
         </div>
@@ -669,6 +968,15 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Signup Details Drawer */}
+      {selectedSignup && (
+        <SignupDetailsDrawer
+          signup={selectedSignup}
+          onClose={() => setSelectedSignup(null)}
+          onUpdateStatus={handleUpdateSignupStatus}
+        />
       )}
 
       {/* Toast Notification */}

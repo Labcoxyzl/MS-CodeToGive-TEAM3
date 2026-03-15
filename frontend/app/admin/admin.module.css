@@ -468,6 +468,310 @@
   }
 }
 
+/* ── Filters Bar ────────────────────────────────────────── */
+.filtersBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Date Input ─────────────────────────────────────────── */
+.dateInput {
+  padding: 9px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--lt-text-primary);
+  background: var(--lt-card-bg-white);
+  border: 1px solid var(--lt-border);
+  border-radius: var(--lt-radius-sm);
+  outline: none;
+  transition: border-color var(--lt-transition), box-shadow var(--lt-transition);
+  width: 150px;
+}
+
+.dateInput:focus {
+  border-color: var(--lt-teal);
+  box-shadow: 0 0 0 3px var(--lt-teal-light);
+}
+
+/* ── Export Button ──────────────────────────────────────── */
+.exportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--lt-teal);
+  border: none;
+  border-radius: var(--lt-radius-sm);
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  font-family: inherit;
+}
+
+.exportBtn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.exportBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── View Button ────────────────────────────────────────── */
+.viewBtn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lt-teal);
+  background: var(--lt-teal-light);
+  border: 1px solid transparent;
+  border-radius: var(--lt-radius-sm);
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  font-family: inherit;
+}
+
+.viewBtn:hover {
+  border-color: var(--lt-teal);
+}
+
+/* ── Guest Badge ────────────────────────────────────────── */
+.guestBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--lt-radius-full);
+  background: var(--lt-purple-light);
+  color: var(--lt-purple);
+  vertical-align: middle;
+}
+
+/* ── Signup Status Badge ────────────────────────────────── */
+.signupStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--lt-radius-full);
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.signupStatusBadge[data-status="registered"] {
+  background: var(--lt-teal-light);
+  color: var(--lt-teal);
+}
+
+.signupStatusBadge[data-status="attended"] {
+  background: #D4EDDA;
+  color: #155724;
+}
+
+.signupStatusBadge[data-status="cancelled"] {
+  background: var(--lt-error-bg);
+  color: var(--lt-error);
+}
+
+/* ── Drawer ─────────────────────────────────────────────── */
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: 480px;
+  max-width: 90vw;
+  height: 100%;
+  background: var(--lt-card-bg-white);
+  box-shadow: var(--lt-shadow-elevated);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.25s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--lt-border);
+}
+
+.drawerTitle {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--lt-text-primary);
+  margin: 0;
+}
+
+.drawerClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--lt-radius-sm);
+  background: transparent;
+  color: var(--lt-text-secondary);
+  cursor: pointer;
+  transition: all var(--lt-transition);
+}
+
+.drawerClose:hover {
+  background: var(--lt-card-bg-muted);
+  color: var(--lt-text-primary);
+}
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.drawerSection {
+  margin-bottom: 28px;
+}
+
+.drawerSectionTitle {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--lt-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 14px;
+}
+
+.drawerFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drawerField {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.drawerFieldLabel {
+  flex: 0 0 100px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lt-text-secondary);
+  padding-top: 2px;
+}
+
+.drawerFieldValue {
+  font-size: 14px;
+  color: var(--lt-text-primary);
+  word-break: break-word;
+}
+
+.drawerMap {
+  margin-top: 14px;
+  border-radius: var(--lt-radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--lt-border);
+}
+
+.drawerActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actionBtnSuccess {
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #155724;
+  background: #D4EDDA;
+  border: 1px solid transparent;
+  border-radius: var(--lt-radius-sm);
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  font-family: inherit;
+}
+
+.actionBtnSuccess:hover:not(:disabled) {
+  border-color: #155724;
+}
+
+.actionBtnSuccess:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtnDefault {
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lt-teal);
+  background: var(--lt-teal-light);
+  border: 1px solid transparent;
+  border-radius: var(--lt-radius-sm);
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  font-family: inherit;
+}
+
+.actionBtnDefault:hover:not(:disabled) {
+  border-color: var(--lt-teal);
+}
+
+.actionBtnDefault:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionBtnDanger {
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--lt-error);
+  background: var(--lt-error-bg);
+  border: 1px solid transparent;
+  border-radius: var(--lt-radius-sm);
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  font-family: inherit;
+}
+
+.actionBtnDanger:hover:not(:disabled) {
+  border-color: var(--lt-error);
+}
+
+.actionBtnDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {
   .adminContent {
@@ -499,5 +803,20 @@
 
   .confirmDialog {
     padding: 24px;
+  }
+
+  .filtersBar {
+    padding: 0 16px 16px;
+  }
+
+  .filtersBar .searchInput,
+  .filtersBar .statusFilter,
+  .filtersBar .dateInput {
+    width: 100%;
+  }
+
+  .drawer {
+    width: 100%;
+    max-width: none;
   }
 }
