@@ -63,12 +63,77 @@ def _read_lemon_svg() -> str:
         return ""
 
 
-def _build_map_b64(lat: float, lng: float) -> str:
-    """Render a static OSM map centred on lat/lng and return as base64 PNG, or '' on failure."""
+async def _fetch_nearby_markers(lat: float, lng: float, radius_deg: float = 0.02) -> list[dict]:
+    """Fetch nearby food resource markers from the Lemontree markersWithinBounds API."""
+    min_lng = lng - radius_deg
+    min_lat = lat - radius_deg
+    max_lng = lng + radius_deg
+    max_lat = lat + radius_deg
+    url = (
+        "https://platform.foodhelpline.org/api/resources/markersWithinBounds"
+        f"?corner={min_lng},{min_lat}&corner={max_lng},{max_lat}"
+    )
     try:
-        m = StaticMap(508, 300)
-        marker = CircleMarker((lng, lat), "#E86F51", 12)
-        m.add_marker(marker)
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            raw = resp.json()
+            # Response may be a GeoJSON FeatureCollection directly or superjson-wrapped
+            fc = raw if raw.get("features") is not None else raw.get("json", {})
+            features = fc.get("features") or []
+            return [
+                {
+                    "type": f["properties"]["resourceTypeId"],
+                    "lng": f["geometry"]["coordinates"][0],
+                    "lat": f["geometry"]["coordinates"][1],
+                }
+                for f in features
+                if f.get("geometry", {}).get("coordinates") and len(f["geometry"]["coordinates"]) >= 2
+            ]
+    except Exception:
+        return []
+
+
+_CARTO_TILES = "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+
+
+def _add_marker(m: StaticMap, coord: tuple, color: str, diameter: int = 14) -> None:
+    """Add a white-bordered circle marker by stacking a larger white circle beneath."""
+    m.add_marker(CircleMarker(coord, "white", diameter + 4))
+    m.add_marker(CircleMarker(coord, color, diameter))
+
+
+def _add_event_marker(m: StaticMap, coord: tuple) -> None:
+    """Add the teal event-location pin with a white border (matches frontend style)."""
+    m.add_marker(CircleMarker(coord, "white", 24))
+    m.add_marker(CircleMarker(coord, "#2E8B7A", 18))
+
+
+async def _build_map_b64(lat: float, lng: float) -> str:
+    """Render a static CartoDB Positron map centred on lat/lng with nearby food resource markers.
+
+    Uses the same Lemontree markersWithinBounds API and colour scheme as the
+    frontend welcome/event-creation maps:
+      • purple  (#6942b5) — food pantry
+      • orange  (#E86F51) — soup kitchen
+    All markers have white borders to match the frontend MapLibre style.
+    The event location is a larger teal (#2E8B7A) pin.
+    Returns a base64-encoded PNG string, or '' on failure.
+    """
+    try:
+        m = StaticMap(508, 300, url_template=_CARTO_TILES)
+
+        # Fetch nearby resource markers (same API call as frontend)
+        nearby = await _fetch_nearby_markers(lat, lng)
+
+        # Add food resource markers (rendered first so the event pin sits on top)
+        for resource in nearby[:80]:
+            color = "#E86F51" if resource["type"] == "SOUP_KITCHEN" else "#6942b5"
+            _add_marker(m, (resource["lng"], resource["lat"]), color)
+
+        # Event location: teal pin with white border (matches frontend)
+        _add_event_marker(m, (lng, lat))
+
         image = m.render(zoom=14)
         buf = io.BytesIO()
         image.save(buf, format="PNG")
@@ -133,7 +198,7 @@ async def generate_flyer(event_id: str, current_user: CurrentUser):
         event["latitude"], event["longitude"]
     )
 
-    map_b64 = _build_map_b64(event["latitude"], event["longitude"])
+    map_b64 = await _build_map_b64(event["latitude"], event["longitude"])
 
     template = _jinja_env.get_template("flyer.html")
     html = template.render(
