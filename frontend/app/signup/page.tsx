@@ -9,11 +9,6 @@ import SelectField from "@/app/components/ui/SelectField";
 import styles from "./signup.module.css";
 
 /* ── Option lists ──────────────────────────────────────────── */
-const ROLE_OPTIONS = [
-  { value: "leader", label: "Event Leader" },
-  { value: "volunteer", label: "Event Participant" },
-  { value: "promoter", label: "Event Promoter" },
-];
 
 const CATEGORY_OPTIONS = [
   { value: "corporate", label: "Corporate" },
@@ -263,18 +258,48 @@ export default function SignUpPage() {
             {/* ── Section 2: About You ───────────────────────── */}
             <h2 className="lt-section-header">About You</h2>
 
-            <div className={styles.row}>
-              <SelectField
-                id="signup-role"
-                label="Role"
-                options={ROLE_OPTIONS}
-                value={role}
-                onChange={setRole}
-                placeholder="Choose your role"
-                required
-                error={errors.role}
-              />
+            {/* Role Selection Grid */}
+            <div className="lt-form-group">
+              <label className="lt-label">
+                How would you like to participate?
+                <span className="lt-label__required">*</span>
+              </label>
+              <div className={styles.roleCardsWrapper}>
+                <button
+                  type="button"
+                  className={`${styles.roleCard} ${role === "leader" ? styles["roleCard--active"] : ""}`}
+                  onClick={() => setRole("leader")}
+                >
+                  <h3 className={styles.roleCardTitle}>Event Leader</h3>
+                  <p className={styles.roleCardDesc}>
+                    Able to create events on the website. For people who feel they have the ability to organize and lead flyering events.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.roleCard} ${role === "volunteer" ? styles["roleCard--active"] : ""}`}
+                  onClick={() => setRole("volunteer")}
+                >
+                  <h3 className={styles.roleCardTitle}>Event Participant</h3>
+                  <p className={styles.roleCardDesc}>
+                    May not create events, but able to indicate they will join a flyering event. For people who want to volunteer but may not feel comfortable leading.
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.roleCard} ${role === "promoter" ? styles["roleCard--active"] : ""}`}
+                  onClick={() => setRole("promoter")}
+                >
+                  <h3 className={styles.roleCardTitle}>Event Promoter</h3>
+                  <p className={styles.roleCardDesc}>
+                    Not able to be present for events but want to promote them via social media or other means. Keep in the loop for when events are occurring.
+                  </p>
+                </button>
+              </div>
+              {errors.role && <p className="lt-error-text" style={{ marginTop: "-16px", marginBottom: "16px" }}>{errors.role}</p>}
+            </div>
 
+            <div className={styles.row}>
               <SelectField
                 id="signup-category"
                 label="Category"
@@ -302,10 +327,16 @@ export default function SignUpPage() {
                   type="button"
                   className="lt-select"
                   onClick={() => setLangDropdownOpen(!langDropdownOpen)}
-                  style={{ textAlign: "left" }}
+                  style={{
+                    textAlign: "left",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    color: languages.length > 0 ? "inherit" : "var(--lt-text-muted)"
+                  }}
                 >
                   {languages.length > 0
-                    ? `${languages.length} selected`
+                    ? languages.join(", ")
                     : "Select languages"}
                 </button>
                 {langDropdownOpen && (

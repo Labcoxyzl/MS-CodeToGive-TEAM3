@@ -1,11 +1,12 @@
 """Auth routes — thin wrappers around Supabase auth so the frontend can call a
 single API rather than talking to Supabase directly."""
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from typing import Optional
 from gotrue.errors import AuthApiError
-from app.core.auth import CurrentUser
+from app.core.auth import CurrentUser, bearer_scheme
 from app.core.supabase import get_supabase_admin, get_supabase_client
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -127,6 +128,9 @@ async def log_in(body: LoginRequest):
 
 
 @router.post("/logout")
-async def log_out(current_user: CurrentUser):
-    get_supabase_admin().auth.admin.sign_out(current_user["sub"], scope="global")
+async def log_out(
+    current_user: CurrentUser,
+    token: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+):
+    get_supabase_admin().auth.admin.sign_out(token.credentials, scope="global")
     return {"message": "Signed out"}

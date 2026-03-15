@@ -58,3 +58,74 @@
   width: 16px;
   height: 16px;
 }
+
+/* ── Role Selection Cards ──────────────────────────────────── */
+.roleCardsWrapper {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+.roleCard {
+  appearance: none;
+  background: var(--lt-card-bg-white);
+  border: 2px solid var(--lt-border);
+  border-radius: var(--lt-radius-md);
+  padding: 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--lt-transition);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  font-family: inherit;
+  outline: none;
+  box-shadow: var(--lt-shadow-card);
+}
+
+.roleCard:focus-visible {
+  border-color: var(--lt-teal);
+  box-shadow: 0 0 0 3px var(--lt-teal-light);
+}
+
+.roleCard:hover {
+  border-color: var(--lt-teal);
+  background: #FAFAFA;
+  transform: translateY(-4px);
+  box-shadow: var(--lt-shadow-elevated);
+}
+
+.roleCard--active,
+.roleCard--active:hover {
+  border-color: var(--lt-teal);
+  background: var(--lt-teal-light);
+  box-shadow: 0 0 0 1px var(--lt-teal);
+}
+
+.roleCardTitle {
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--lt-text-primary);
+  margin: 0;
+}
+
+.roleCard--active .roleCardTitle {
+  color: var(--lt-teal);
+}
+
+.roleCardDesc {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--lt-text-secondary);
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  .roleCardsWrapper {
+    grid-template-columns: 1fr;
+  }
+}
