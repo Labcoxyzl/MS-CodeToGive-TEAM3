@@ -272,7 +272,7 @@ async def _reverse_geocode(lat: float, lng: float) -> str:
 
 
 @router.get("/{event_id}")
-async def generate_flyer(event_id: str, current_user: CurrentUser):
+async def generate_flyer(event_id: str, current_user: CurrentUser, lang: str | None = None):
     """Generate and return a volunteer recruitment flyer PDF for *event_id*."""
 
     # 1. Fetch event
@@ -308,7 +308,7 @@ async def generate_flyer(event_id: str, current_user: CurrentUser):
 
     map_b64 = await _build_map_b64(event["latitude"], event["longitude"])
 
-    lang = event.get("flyer_language", "en")
+    lang = lang or event.get("flyer_language") or "en"
     t = _STRINGS.get(lang, _STRINGS["en"])
 
     template = _jinja_env.get_template("flyer.html")

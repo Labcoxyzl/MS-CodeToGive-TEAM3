@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.core.auth import CurrentUser
 from app.core.supabase import get_supabase_admin
+from app.core.points import award_points, calculate_leader_points, LEADER_BONUS_PER_ATTENDEE
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -240,6 +241,38 @@ async def update_event(event_id: str, body: EventUpdate, current_user: CurrentUs
     updated = get_supabase_admin().table("events").update(update_data).eq("id", event_id).execute()
     if not updated.data:
         raise HTTPException(status_code=500, detail="Failed to update event")
+
+    # Award leader points when event is marked completed (only once, on transition)
+    if update_data.get("status") == "completed" and event.get("status") != "completed":
+        try:
+            db = get_supabase_admin()
+
+            # Base points for leading (1.5x volunteer rate)
+            base_pts = calculate_leader_points(event["start_time"], event["end_time"])
+
+            # Bonus points per attended volunteer
+            attended_res = db.table("event_signups") \
+                .select("id") \
+                .eq("event_id", event_id) \
+                .eq("status", "attended") \
+                .execute()
+            attendee_count = len(attended_res.data) if attended_res.data else 0
+            bonus_pts = attendee_count * LEADER_BONUS_PER_ATTENDEE
+
+            total_pts = base_pts + bonus_pts
+            hours = round(base_pts / 15)
+            description = f"Led event ({hours}hr, {attendee_count} attendees)"
+
+            award_points(
+                db,
+                user_id=event["event_leader_id"],
+                action="event_created",
+                points=total_pts,
+                event_id=event_id,
+                description=description,
+            )
+        except Exception:
+            pass  # Don't fail the update if points award errors
 
     return updated.data[0]
 

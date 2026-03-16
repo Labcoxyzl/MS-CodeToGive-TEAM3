@@ -367,7 +367,9 @@
 /* ── Sidebar ──────────────────────────────────────────────────── */
 .lt-sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
+  position: sticky;
+  top: 0;
   background: var(--lt-bg);
   border-right: 1px solid var(--lt-border);
   padding: 24px 0;
@@ -407,11 +409,18 @@
   text-decoration: none;
   transition: all var(--lt-transition);
   border-left: 3px solid transparent;
+  cursor: pointer;
 }
 
 .lt-sidebar__link:hover {
   background: var(--lt-card-bg-muted);
   color: var(--lt-text-primary);
+}
+
+.lt-sidebar__link--logout:hover {
+  background: #fff0ee;
+  color: var(--lt-coral);
+  font-weight: 700;
 }
 
 .lt-sidebar__link--active {

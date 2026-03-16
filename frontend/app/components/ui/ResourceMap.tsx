@@ -24,6 +24,7 @@ interface EventMarker {
   location_name: string | null;
   current_signup_count: number;
   volunteer_limit: number | null;
+  resource_id: string | null;
 }
 
 interface ResourceMapProps {
@@ -60,6 +61,7 @@ export default function ResourceMap({
   const [selectedMarkerCoords, setSelectedMarkerCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventMarker | null>(null);
   const [selectedEventGroup, setSelectedEventGroup] = useState<EventMarker[] | null>(null);
+  const [selectedEventResourceName, setSelectedEventResourceName] = useState<string | null>(null);
 
   // Group events by location — events sharing the same lat/lng are clustered
   const eventClusters = useMemo(() => {
@@ -99,6 +101,16 @@ export default function ResourceMap({
     } catch { /* ignore */ }
   }
 
+  // Fetch resource name when an event with a resource_id is selected
+  useEffect(() => {
+    setSelectedEventResourceName(null);
+    if (!selectedEvent?.resource_id) return;
+    fetch(`https://platform.foodhelpline.org/api/resources/${selectedEvent.resource_id}`)
+      .then(r => r.json())
+      .then(raw => { const d = raw.json ?? raw; setSelectedEventResourceName(d?.name ?? null); })
+      .catch(() => {});
+  }, [selectedEvent]);
+
   // Fetch full resource detail when a marker is clicked
   async function handleMarkerClick(id: string, coords: { lat: number; lng: number }) {
     setSelectedEvent(null);
@@ -135,6 +147,7 @@ export default function ResourceMap({
               location_name: e.location_name,
               current_signup_count: e.current_signup_count,
               volunteer_limit: e.volunteer_limit,
+              resource_id: e.resource_id ?? null,
             }))
         );
       })
@@ -153,6 +166,7 @@ export default function ResourceMap({
     if (name) params.set("location_name", name);
     if (selectedMarkerCoords?.lat != null) params.set("lat", String(selectedMarkerCoords.lat));
     if (selectedMarkerCoords?.lng != null) params.set("lng", String(selectedMarkerCoords.lng));
+    if (selectedResource?.id) params.set("resource_id", selectedResource.id);
     return `/events/create?${params.toString()}`;
   }
 
@@ -367,6 +381,7 @@ export default function ResourceMap({
               ...(selectedEventGroup[0].location_name ? { location_name: selectedEventGroup[0].location_name } : {}),
               lat: String(selectedEventGroup[0].lat),
               lng: String(selectedEventGroup[0].lng),
+              ...(selectedEventGroup[0].resource_id ? { resource_id: selectedEventGroup[0].resource_id } : {}),
             }).toString()}`}
             style={{
               display: "inline-block", marginTop: 14, fontSize: 13, color: "white",
@@ -400,9 +415,15 @@ export default function ResourceMap({
             </span>
           </div>
 
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: "#1a1a1a" }}>
             {selectedEvent.title}
           </h3>
+
+          {selectedEventResourceName && (
+            <p style={{ fontSize: 12, color: "#6942b5", fontWeight: 600, marginBottom: 6 }}>
+              {selectedEventResourceName}
+            </p>
+          )}
 
           {selectedEvent.location_name && (
             <p style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>📍 {selectedEvent.location_name}</p>
@@ -432,6 +453,7 @@ export default function ResourceMap({
                 ...(selectedEvent.location_name ? { location_name: selectedEvent.location_name } : {}),
                 lat: String(selectedEvent.lat),
                 lng: String(selectedEvent.lng),
+                ...(selectedEvent.resource_id ? { resource_id: selectedEvent.resource_id } : {}),
               }).toString()}`}
               style={{
                 fontSize: 13, color: "white", fontWeight: 600,

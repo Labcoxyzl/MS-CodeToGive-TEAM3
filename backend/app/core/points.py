@@ -4,15 +4,31 @@ from datetime import datetime
 
 
 POINTS_PER_HOUR = 10
+LEADER_MULTIPLIER = 1.5   # Leaders earn 15 pts/hr vs volunteers' 10 pts/hr
+LEADER_BONUS_PER_ATTENDEE = 5  # Extra pts per volunteer who attended the event
+
+
+def _parse_time(value: str) -> datetime:
+    """Parse HH:MM:SS, HH:MM, or a full ISO datetime — return a datetime object."""
+    for fmt in ("%H:%M:%S", "%H:%M"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            pass
+    # Full ISO datetime (e.g. "2026-03-29T11:00:00+00:00")
+    return datetime.fromisoformat(value)
 
 
 def calculate_event_points(start_time: str, end_time: str) -> int:
     """Convert event duration to points. e.g. 2.5hrs → 25 pts."""
-    fmt = "%H:%M:%S"
-    start = datetime.strptime(start_time, fmt)
-    end = datetime.strptime(end_time, fmt)
-    hours = (end - start).total_seconds() / 3600
+    hours = (_parse_time(end_time) - _parse_time(start_time)).total_seconds() / 3600
     return round(hours * POINTS_PER_HOUR)
+
+
+def calculate_leader_points(start_time: str, end_time: str) -> int:
+    """Points awarded to the event leader on completion (1.5x volunteer rate)."""
+    hours = (_parse_time(end_time) - _parse_time(start_time)).total_seconds() / 3600
+    return round(hours * POINTS_PER_HOUR * LEADER_MULTIPLIER)
 
 
 def award_points(db, user_id: str, action: str, points: int, event_id: str | None = None, description: str | None = None):

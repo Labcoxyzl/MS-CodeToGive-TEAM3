@@ -360,7 +360,9 @@ export default function DashboardPage() {
                   events={upcomingEvents}
                   onRegistrationChange={(eventId, registered) =>
                     setUpcomingEvents((prev) =>
-                      prev.map((ev) => ev.id === eventId ? { ...ev, registered } : ev)
+                      registered
+                        ? prev.map((ev) => ev.id === eventId ? { ...ev, registered } : ev)
+                        : prev.filter((ev) => ev.id !== eventId)
                     )
                   }
                 />

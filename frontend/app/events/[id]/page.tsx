@@ -517,7 +517,9 @@ export default function EventDetailPage() {
                       mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
                       attributionControl={false}
                     >
-                      {mapMarkers.map((m) => (
+                      {mapMarkers.filter((m) =>
+                        !(Math.abs(m.lat - event.latitude!) < 0.00005 && Math.abs(m.lng - event.longitude!) < 0.00005)
+                      ).map((m) => (
                         <Marker key={m.id} longitude={m.lng} latitude={m.lat} anchor="center">
                           <div
                             title={m.name ?? (m.type === "SOUP_KITCHEN" ? "Soup Kitchen" : "Food Pantry")}
@@ -525,7 +527,7 @@ export default function EventDetailPage() {
                           />
                         </Marker>
                       ))}
-                      <Marker longitude={event.longitude} latitude={event.latitude} anchor="center">
+                      <Marker longitude={event.longitude} latitude={event.latitude} anchor="center" style={{ zIndex: 10 }}>
                         <div style={{ width: 18, height: 18, borderRadius: "50%", border: "3px solid white", background: "#2E8B7A", boxShadow: "0 2px 8px rgba(0,0,0,0.5)" }} title="Event location" />
                       </Marker>
                     </Map>

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -6,9 +8,12 @@ from app.api.routes import auth, events, health, admin, flyer, signups, messages
 app = FastAPI(title="MS CodeToGive API", version="0.1.0")
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
+_raw = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+_origins = [o.strip() for o in _raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # update for production
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {Search} from "lucide-react";
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 import Image from "next/image";
 import Map, {Marker} from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
@@ -23,8 +23,13 @@ export default function WelcomePage() {
   const [userState, setUserState] = useState({ name: '', initials: '' });
   const [userLoading, setUserLoading] = useState(false);
  const [sidebarOpen, setSidebarOpen] = useState(false);
- const [searchOpen, setSearchOpen] = useState(false);
  const [searchQuery, setSearchQuery] = useState("");
+ const [searchError, setSearchError] = useState("");
+ const [suggestions, setSuggestions] = useState<{ label: string; sublabel?: string; lng: number; lat: number; zoom: number }[]>([]);
+ const [showSuggestions, setShowSuggestions] = useState(false);
+ const searchInputRef = useRef<HTMLInputElement>(null);
+ const searchWrapRef = useRef<HTMLDivElement>(null);
+ const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
  // resource markers loaded from FoodHelpline API
  const [markers, setMarkers] = useState<
   { id: string; lng: number; lat: number; type: string; name?: string }[]
@@ -56,22 +61,63 @@ export default function WelcomePage() {
   "upper west side": { longitude: -73.9754, latitude: 40.7870, zoom: 13 },
   "upper east side": { longitude: -73.9566, latitude: 40.7736, zoom: 13 },
 };
-// handles search submission and moves map to selected neighborhood
-function handleAreaSearch() {
-  const query = searchQuery.trim().toLowerCase();
-  const area = areaMap[query];
+// Load markers around a coordinate after a programmatic jump
+function jumpAndLoad(lng: number, lat: number, zoom: number) {
+  setViewState({ longitude: lng, latitude: lat, zoom });
+  const delta = zoom >= 13 ? 0.05 : 0.15;
+  loadMarkers({ minLng: lng - delta, minLat: lat - delta, maxLng: lng + delta, maxLat: lat + delta });
+}
 
-  if (!area) {
-    alert("Area not found. Try Harlem, Bronx, Brooklyn, Queens, Manhattan, or Inwood.");
+// Jump map to a known neighborhood key
+function jumpToArea(query: string) {
+  const key = query.trim().toLowerCase();
+  const area = areaMap[key];
+  if (!area) return false;
+  setSearchError("");
+  setSearchQuery("");
+  jumpAndLoad(area.longitude, area.latitude, area.zoom);
+  return true;
+}
+
+// Geocode any free-form address via Nominatim (no API key needed)
+async function handleAreaSearch() {
+  const query = searchQuery.trim();
+  if (!query) return;
+
+  // Try known neighborhoods first
+  if (jumpToArea(query)) return;
+
+  // Fall back to Nominatim geocoding
+  setSearchError("");
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const results = await res.json();
+    if (results.length === 0) {
+      setSearchError(`"${query}" not found. Try a full address or neighborhood.`);
+      return;
+    }
+    const { lon, lat } = results[0];
+    setSearchQuery("");
+    jumpAndLoad(parseFloat(lon), parseFloat(lat), 14);
+  } catch {
+    setSearchError("Search failed. Please try again.");
+  }
+}
+
+// Jump to user's current GPS location
+function handleUseMyLocation() {
+  if (!navigator.geolocation) {
+    setSearchError("Geolocation is not supported by your browser.");
     return;
   }
-
-  setViewState((prev) => ({
-    ...prev,
-    longitude: area.longitude,
-    latitude: area.latitude,
-    zoom: area.zoom,
-  }));
+  setSearchError("");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { jumpAndLoad(pos.coords.longitude, pos.coords.latitude, 14); },
+    () => { setSearchError("Unable to get your location. Please allow location access."); }
+  );
 }
 // fetch full resource details when a marker is clicked
  async function handleMarkerClick(id: string, coords: {lat:number;lng:number}) {
@@ -196,6 +242,58 @@ function handleAreaSearch() {
    }
  }, []);
 
+ // Debounced autocomplete
+ useEffect(() => {
+   if (debounceRef.current) clearTimeout(debounceRef.current);
+   if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+     setSuggestions([]);
+     setShowSuggestions(false);
+     return;
+   }
+   debounceRef.current = setTimeout(async () => {
+     const q = searchQuery.trim().toLowerCase();
+
+     // 1. Matching known neighborhoods
+     const neighborhoodMatches = Object.entries(areaMap)
+       .filter(([key]) => key.includes(q))
+       .map(([key, val]) => ({
+         label: key.split(" ").map((w) => w[0].toUpperCase() + w.slice(1)).join(" "),
+         lng: val.longitude, lat: val.latitude, zoom: val.zoom,
+       }));
+
+     // 2. Nominatim results
+     try {
+       const res = await fetch(
+         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery.trim())}&format=json&limit=5&addressdetails=1`,
+         { headers: { "Accept-Language": "en" } }
+       );
+       const data = await res.json();
+       const geocoded = (data as { display_name: string; lon: string; lat: string }[]).map((r) => {
+         const parts = r.display_name.split(",");
+         return { label: parts[0].trim(), sublabel: parts.slice(1, 3).join(",").trim(), lng: parseFloat(r.lon), lat: parseFloat(r.lat), zoom: 14 };
+       });
+       const combined = [...neighborhoodMatches, ...geocoded].slice(0, 6);
+       setSuggestions(combined);
+       setShowSuggestions(combined.length > 0);
+     } catch {
+       setSuggestions(neighborhoodMatches);
+       setShowSuggestions(neighborhoodMatches.length > 0);
+     }
+   }, 350);
+   return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+ }, [searchQuery]);
+
+ // Close suggestions on outside click
+ useEffect(() => {
+   function onDown(e: MouseEvent) {
+     if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+       setShowSuggestions(false);
+     }
+   }
+   document.addEventListener("mousedown", onDown);
+   return () => document.removeEventListener("mousedown", onDown);
+ }, []);
+
 return (
   <div
   className={`lt-page ${styles.pageFont}`}
@@ -205,39 +303,112 @@ return (
 
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       {/* header */}
-      <header className={dashStyles.topBar} style={{ position: 'relative' }}>
-        {/* Left Spacer to maintain logo centering */}
-        <div style={{ width: '200px' }} />
+      <header className={dashStyles.topBar} style={{ gap: 16 }}>
+        {/* Left: Logo */}
+        <Link href="/" className="lt-header__logo" style={{ flexShrink: 0 }}>
+          <span>
+            <Image src="/logo.svg" alt="Lemontree Icon" width={32} height={32} priority />
+            <Image src="/lemontree_text_logo.svg" alt="Lemontree" width={112} height={24} priority />
+          </span>
+        </Link>
 
-        {/* Center: Logo */}
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center' }}>
-          <Link href="/" className="lt-header__logo">
-            <span>
-              <Image
-                src="/logo.svg"
-                alt="Lemontree Icon"
-                width={32}
-                height={32}
-                priority
-              />
-              <Image
-                src="/lemontree_text_logo.svg"
-                alt="Lemontree"
-                width={112}
-                height={24}
-                priority
-              />
-            </span>
-          </Link>
+        {/* Center: Search bar */}
+        <div ref={searchWrapRef} style={{ flex: 1, maxWidth: 420, position: "relative" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "rgba(255,255,255,0.75)", borderRadius: showSuggestions ? "12px 12px 0 0" : 50,
+            padding: "6px 6px 6px 14px",
+            border: "1.5px solid rgba(0,0,0,0.10)",
+            borderBottom: showSuggestions ? "1px solid #f0e8d8" : "1.5px solid rgba(0,0,0,0.10)",
+            boxShadow: showSuggestions ? "0 2px 0 rgba(0,0,0,0.04)" : "0 1px 6px rgba(0,0,0,0.08)",
+            transition: "box-shadow 0.15s, border-color 0.15s",
+          }}
+            onFocusCapture={(e) => { e.currentTarget.style.borderColor = "#784cc5"; }}
+            onBlurCapture={(e) => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.10)"; }}
+          >
+            <Search size={14} style={{ color: "#9C9690", flexShrink: 0 }} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search any address or neighborhood..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setSearchError(""); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { setShowSuggestions(false); handleAreaSearch(); }
+                if (e.key === "Escape") { setShowSuggestions(false); setSearchQuery(""); }
+              }}
+              onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
+              style={{
+                flex: 1, border: "none", outline: "none", fontSize: 13,
+                background: "transparent", color: "#2D2A26",
+                fontFamily: "var(--font-dm-sans)",
+              }}
+            />
+            {searchQuery ? (
+              <button
+                onClick={() => { setSearchQuery(""); setSearchError(""); setSuggestions([]); setShowSuggestions(false); }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#9C9690", fontSize: 16, lineHeight: 1, padding: "0 4px", flexShrink: 0 }}
+              >×</button>
+            ) : (
+              <button
+                onClick={handleUseMyLocation}
+                title="Use my current location"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#784cc5", padding: "0 6px 0 2px", flexShrink: 0, display: "flex", alignItems: "center" }}
+              >
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="7" r="2.5" stroke="#784cc5" strokeWidth="1.5"/>
+                  <path d="M8 1C5.24 1 3 3.24 3 6c0 3.75 5 9 5 9s5-5.25 5-9c0-2.76-2.24-5-5-5z" stroke="#784cc5" strokeWidth="1.5" fill="none"/>
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div style={{
+              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 200,
+              background: "rgba(255,255,255,0.97)",
+              border: "1.5px solid #784cc5", borderTop: "none",
+              borderRadius: "0 0 12px 12px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              overflow: "hidden",
+            }}>
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setSearchQuery("");
+                    setShowSuggestions(false);
+                    setSuggestions([]);
+                    jumpAndLoad(s.lng, s.lat, s.zoom);
+                  }}
+                  style={{
+                    width: "100%", textAlign: "left", background: "none", border: "none",
+                    padding: "9px 14px", cursor: "pointer", display: "flex", flexDirection: "column", gap: 1,
+                    borderBottom: i < suggestions.length - 1 ? "1px solid #f5ede4" : "none",
+                    transition: "background 0.1s",
+                    fontFamily: "var(--font-dm-sans)",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "#fdf5ef")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#2D2A26" }}>{s.label}</span>
+                  {s.sublabel && <span style={{ fontSize: 11, color: "#9C9690" }}>{s.sublabel}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {searchError && (
+            <p style={{ color: "#D63B2F", fontSize: 11, marginTop: 4, paddingLeft: 14, position: "absolute" }}>
+              {searchError}
+            </p>
+          )}
         </div>
 
-        {/* Right: Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", justifyContent: "flex-end", width: "300px" }}>
-          <Search
-            className="w-6 h-6 cursor-pointer text-[#2D2A26] opacity-70 hover:opacity-100 transition-opacity"
-            onClick={() => setSearchOpen(!searchOpen)}
-          />
-
+        {/* Right: Auth */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           {!isAuth ? (
             <div className="flex gap-3">
               <Link href="/login">
@@ -268,32 +439,6 @@ return (
         </div>
       </header>
 
-      {/* search bar */}
-      {searchOpen && (
-        <div className="w-full bg-white border-b shadow-sm p-4 flex justify-center relative z-30">
-          <div className="w-full max-w-xl flex gap-2">
-            <input
-              type="text"
-              placeholder="Search a neighborhood or borough..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleAreaSearch();
-                }
-              }}
-              className="flex-1 border text-black rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#6942b5]"
-            />
-
-            <button
-              onClick={handleAreaSearch}
-              className="bg-[#6942b5] text-white px-4 py-2 rounded-md hover:bg-[#5a34a0] transition"
-            >
-              Go
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Main Content */}
       <main className="flex-1 w-full">
@@ -628,7 +773,7 @@ return (
           )}
 
           {/* Hero Section */}
-          <section className="relative z-10 pointer-events-none max-w-5xl mx-auto flex flex-col items-center text-center py-32 px-6">
+          <section className="relative z-10 pointer-events-none max-w-5xl mx-auto flex flex-col items-center text-center py-24 px-6">
             <h1 className="text-3xl md:text-4xl font-bold mb-4 text-black">
               Welcome to Lemontree's Volunteer Hub
             </h1>
@@ -642,6 +787,7 @@ return (
                 Start Volunteering
               </button>
             </Link>
+
           </section>
         </div>
 

@@ -36,7 +36,7 @@ const C = {
 };
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
-const LANGUAGES = ['English','Spanish','Chinese (Simplified)','Chinese (Traditional)','Bengali','Russian','Haitian Creole','Korean','Arabic','Urdu','Polish','Yiddish','French','Tagalog','Italian','Portuguese','Hindi','Japanese','Greek','Albanian','Other'];
+const LANGUAGES = ['English','Spanish','French','Portuguese','Italian','Polish','Haitian Creole','Tagalog'];
 
 // ─── Input helpers ─────────────────────────────────────────────────────────────
 const IB: React.CSSProperties = {
@@ -98,7 +98,7 @@ function Dropdown({ value, onChange, placeholder, options }: {
       </button>
       {open && (
         <div style={{position:'absolute',zIndex:50,width:'100%',marginTop:3,background:'white',
-          border:`2px solid ${C.inputBorder}`,borderRadius:'55px',
+          border:`2px solid ${C.inputBorder}`,borderRadius:'10px',
           boxShadow:'0 8px 24px rgba(107,70,193,0.15)',overflow:'hidden'}}>
           <div style={{padding:8,borderBottom:`1px solid ${C.border}`}}>
             <input ref={inp} type="text" value={search} onChange={e=>setSearch(e.target.value)}
@@ -247,7 +247,7 @@ const INIT: Form = {
   locationAddress: '',
   volunteers: '',
   flyerLanguage: '',
-  visibility: 'private',
+  visibility: 'public',
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -366,6 +366,18 @@ export default function CreateEventPage() {
   useEffect(() => {
     loadMarkers({minLng:-74.1,minLat:40.6,maxLng:-73.7,maxLat:40.9});
   }, []);
+
+  // Pre-fetch resource details when navigated here with ?resource_id=
+  useEffect(() => {
+    const resourceId = searchParams.get('resource_id');
+    if (!resourceId) return;
+    setLoadingMapResource(true);
+    fetch(`https://platform.foodhelpline.org/api/resources/${resourceId}`)
+      .then(r => r.json())
+      .then(raw => { setSelectedMapResource(raw.json ?? raw); })
+      .catch(() => {})
+      .finally(() => setLoadingMapResource(false));
+  }, [searchParams]);
 
   // Fly to geocoded coords when address is selected
   useEffect(() => {
@@ -723,7 +735,9 @@ export default function CreateEventPage() {
                   style={{width:'100%',height:'100%'}}
                   mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
                 >
-                  {mapMarkers.map(m => (
+                  {mapMarkers.filter(m =>
+                    !(geocodedCoords && Math.abs(m.lat - geocodedCoords.lat) < 0.00005 && Math.abs(m.lng - geocodedCoords.lng) < 0.00005)
+                  ).map(m => (
                     <Marker key={m.id} longitude={m.lng} latitude={m.lat} anchor="center">
                       <div
                         onClick={() => pickMarker(m.lng, m.lat, m.id)}
@@ -741,7 +755,7 @@ export default function CreateEventPage() {
                     </Marker>
                   ))}
                   {geocodedCoords && (
-                    <Marker longitude={geocodedCoords.lng} latitude={geocodedCoords.lat} anchor="center">
+                    <Marker longitude={geocodedCoords.lng} latitude={geocodedCoords.lat} anchor="center" style={{zIndex:10}}>
                       <div style={{
                         width:18,height:18,borderRadius:'50%',
                         border:'3px solid white',

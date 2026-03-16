@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
 import StatsCard from "@/app/components/ui/StatsCard";
 import AdminEventMap from "@/app/components/ui/AdminEventMap";
+import AdminCharts from "@/app/components/ui/AdminCharts";
 import { apiFetch } from "@/app/lib/api";
 import SignupDetailsDrawer from "@/app/admin/SignupDetailsDrawer";
 import styles from "./admin.module.css";
@@ -141,8 +142,10 @@ export default function AdminPage() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [signupsOpen, setSignupsOpen] = useState(true);
   const [signupEventDropdownOpen, setSignupEventDropdownOpen] = useState(false);
+  const [signupEventSearch, setSignupEventSearch] = useState("");
   const [signupStatusDropdownOpen, setSignupStatusDropdownOpen] = useState(false);
   const signupEventDropdownRef = useRef<HTMLDivElement>(null);
+  const signupEventSearchRef = useRef<HTMLInputElement>(null);
   const signupStatusDropdownRef = useRef<HTMLDivElement>(null);
   const [eventStatusDropdownOpen, setEventStatusDropdownOpen] = useState(false);
   const eventStatusDropdownRef = useRef<HTMLDivElement>(null);
@@ -159,6 +162,7 @@ export default function AdminPage() {
     function handleClickOutside(e: MouseEvent) {
       if (signupEventDropdownRef.current && !signupEventDropdownRef.current.contains(e.target as Node)) {
         setSignupEventDropdownOpen(false);
+        setSignupEventSearch("");
       }
       if (signupStatusDropdownRef.current && !signupStatusDropdownRef.current.contains(e.target as Node)) {
         setSignupStatusDropdownOpen(false);
@@ -594,6 +598,11 @@ export default function AdminPage() {
                     />
                   </div>
 
+                  {/* Charts — top row (trend + donut) */}
+                  <div style={{ marginTop: 24 }}>
+                    <AdminCharts part="top" />
+                  </div>
+
                   {/* Event Overview Map */}
                   <div className={styles.tablePanel} style={{ marginTop: 24 }}>
                     <div className={styles.tablePanelHeader}>
@@ -604,6 +613,11 @@ export default function AdminPage() {
                         <AdminEventMap height={440} />
                       </div>
                     </div>
+                  </div>
+
+                  {/* Charts — bottom row (participation) */}
+                  <div style={{ marginTop: 24 }}>
+                    <AdminCharts part="bottom" />
                   </div>
 
                   {/* Signups Management */}
@@ -644,30 +658,49 @@ export default function AdminPage() {
                             value={signupSearch}
                             onChange={(e) => handleSignupSearchChange(e.target.value)}
                           />
-                          {/* Event filter custom dropdown */}
+                          {/* Event filter custom dropdown — searchable */}
                           <div ref={signupEventDropdownRef} style={{ position: "relative" }}>
                             <button
                               type="button"
                               className="lt-select"
-                              onClick={() => { setSignupEventDropdownOpen(o => !o); setSignupStatusDropdownOpen(false); }}
-                              style={{ textAlign: "left", minWidth: 160, color: signupEventFilter ? "inherit" : "var(--lt-text-muted)" }}
+                              onClick={() => {
+                                const next = !signupEventDropdownOpen;
+                                setSignupEventDropdownOpen(next);
+                                setSignupStatusDropdownOpen(false);
+                                if (next) setTimeout(() => signupEventSearchRef.current?.focus(), 40);
+                              }}
+                              style={{ textAlign: "left", minWidth: 180, color: signupEventFilter ? "inherit" : "var(--lt-text-muted)" }}
                             >
                               {signupEventFilter ? (eventOptions.find(e => e.id === signupEventFilter)?.title ?? "All Events") : "All Events"}
                             </button>
                             {signupEventDropdownOpen && (
-                              <div className="lt-select-dropdown" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", maxHeight: 200, overflowY: "auto", marginTop: 4 }}>
-                                {[{ id: "", title: "All Events" }, ...eventOptions].map((ev) => (
-                                  <div
-                                    key={ev.id}
-                                    className="lt-select-option"
-                                    onClick={() => { setSignupEventFilter(ev.id); applySignupFilters(ev.id); setSignupEventDropdownOpen(false); }}
-                                    style={{ padding: "10px 14px", fontSize: 14, cursor: "pointer", background: signupEventFilter === ev.id ? "var(--lt-teal-light)" : "transparent", color: signupEventFilter === ev.id ? "var(--lt-teal)" : "var(--lt-text-primary)", fontWeight: signupEventFilter === ev.id ? 600 : "normal" }}
-                                    onMouseEnter={(e) => { if (signupEventFilter !== ev.id) e.currentTarget.style.background = "var(--lt-card-bg-muted)"; }}
-                                    onMouseLeave={(e) => { if (signupEventFilter !== ev.id) e.currentTarget.style.background = "transparent"; }}
-                                  >
-                                    {ev.title}
-                                  </div>
-                                ))}
+                              <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 20, minWidth: 240, background: "#fff", border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", overflow: "hidden" }}>
+                                <div style={{ padding: "8px 10px", borderBottom: "1px solid var(--lt-border)" }}>
+                                  <input
+                                    ref={signupEventSearchRef}
+                                    type="text"
+                                    value={signupEventSearch}
+                                    onChange={(e) => setSignupEventSearch(e.target.value)}
+                                    placeholder="Search events…"
+                                    style={{ width: "100%", padding: "6px 10px", fontSize: 13, border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                                  />
+                                </div>
+                                <div style={{ maxHeight: 200, overflowY: "auto" }}>
+                                  {[{ id: "", title: "All Events" }, ...eventOptions]
+                                    .filter(ev => !signupEventSearch || ev.title.toLowerCase().includes(signupEventSearch.toLowerCase()))
+                                    .map((ev) => (
+                                      <div
+                                        key={ev.id}
+                                        className="lt-select-option"
+                                        onClick={() => { setSignupEventFilter(ev.id); applySignupFilters(ev.id); setSignupEventDropdownOpen(false); setSignupEventSearch(""); }}
+                                        style={{ padding: "10px 14px", fontSize: 14, cursor: "pointer", background: signupEventFilter === ev.id ? "var(--lt-teal-light)" : "transparent", color: signupEventFilter === ev.id ? "var(--lt-teal)" : "var(--lt-text-primary)", fontWeight: signupEventFilter === ev.id ? 600 : "normal" }}
+                                        onMouseEnter={(e) => { if (signupEventFilter !== ev.id) e.currentTarget.style.background = "var(--lt-card-bg-muted)"; }}
+                                        onMouseLeave={(e) => { if (signupEventFilter !== ev.id) e.currentTarget.style.background = "transparent"; }}
+                                      >
+                                        {ev.title}
+                                      </div>
+                                    ))}
+                                </div>
                               </div>
                             )}
                           </div>

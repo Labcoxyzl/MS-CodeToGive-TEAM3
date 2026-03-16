@@ -1,7 +1,8 @@
 """Admin routes — analytics, user/event management, and signup management."""
 import csv
 import io
-from datetime import datetime, timezone
+from collections import defaultdict
+from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -154,6 +155,109 @@ async def get_analytics(current_user: CurrentUser):
         "total_attended": attended_res.count or 0,
         "roles_breakdown": roles_breakdown,
     }
+
+
+# ── Analytics: trend ──────────────────────────────────────────────────────────
+
+@router.get("/analytics/trend")
+async def analytics_trend(current_user: CurrentUser, weeks: int = 12):
+    require_admin(current_user)
+    admin = get_supabase_admin()
+
+    cutoff = (date.today() - timedelta(weeks=weeks)).isoformat()
+
+    events_res = admin.table("events").select("date").gte("date", cutoff).execute()
+    signups_res = admin.table("event_signups").select("signed_up_at").gte("signed_up_at", cutoff).execute()
+
+    # Build ISO week → label mapping for the past N weeks
+    today = date.today()
+    week_starts: list[date] = [today - timedelta(weeks=i) for i in range(weeks - 1, -1, -1)]
+    week_starts = [d - timedelta(days=d.weekday()) for d in week_starts]  # normalise to Monday
+
+    buckets: dict[str, dict] = {}
+    for ws in week_starts:
+        key = ws.isoformat()
+        label = ws.strftime("%b %-d")
+        buckets[key] = {"week": label, "events": 0, "signups": 0}
+
+    def iso_week_start(date_str: str) -> str | None:
+        try:
+            d = date.fromisoformat(date_str[:10])
+            return (d - timedelta(days=d.weekday())).isoformat()
+        except Exception:
+            return None
+
+    for row in events_res.data or []:
+        ws = iso_week_start(row.get("date") or "")
+        if ws and ws in buckets:
+            buckets[ws]["events"] += 1
+
+    for row in signups_res.data or []:
+        ws = iso_week_start(row.get("signed_up_at") or "")
+        if ws and ws in buckets:
+            buckets[ws]["signups"] += 1
+
+    return list(buckets.values())
+
+
+# ── Analytics: status breakdown ────────────────────────────────────────────────
+
+@router.get("/analytics/status-breakdown")
+async def analytics_status_breakdown(current_user: CurrentUser):
+    require_admin(current_user)
+    admin = get_supabase_admin()
+
+    events_res = admin.table("events").select("status").execute()
+    counts: dict[str, int] = defaultdict(int)
+    for row in events_res.data or []:
+        counts[row.get("status", "unknown")] += 1
+
+    order = ["upcoming", "active", "completed", "cancelled"]
+    return [{"status": s, "count": counts[s]} for s in order if counts[s] > 0]
+
+
+# ── Analytics: participation rate ─────────────────────────────────────────────
+
+@router.get("/analytics/participation")
+async def analytics_participation(current_user: CurrentUser, limit: int = 15):
+    require_admin(current_user)
+    admin = get_supabase_admin()
+
+    events_res = (
+        admin.table("events")
+        .select("id, title, date, current_signup_count")
+        .eq("status", "completed")
+        .order("date", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    event_ids = [e["id"] for e in (events_res.data or [])]
+    if not event_ids:
+        return []
+
+    attended_res = (
+        admin.table("event_signups")
+        .select("event_id")
+        .eq("status", "attended")
+        .in_("event_id", event_ids)
+        .execute()
+    )
+    attended_counts: dict[str, int] = defaultdict(int)
+    for row in attended_res.data or []:
+        attended_counts[row["event_id"]] += 1
+
+    result = []
+    for ev in events_res.data or []:
+        signups = ev.get("current_signup_count") or 0
+        attended = attended_counts.get(ev["id"], 0)
+        result.append({
+            "title": ev["title"],
+            "date": ev["date"],
+            "signups": signups,
+            "attended": attended,
+            "rate": round(attended / signups * 100) if signups > 0 else 0,
+        })
+    return result
 
 
 # ── Users ─────────────────────────────────────────────────────────────────────

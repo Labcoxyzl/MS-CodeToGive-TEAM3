@@ -67,12 +67,22 @@ function formatDate(s?: string | null) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+type StatusFilter = "all" | "upcoming" | "completed" | "cancelled";
+
+const FILTERS: { value: StatusFilter; label: string; bg: string; color: string; activeBg: string; activeColor: string }[] = [
+  { value: "all",       label: "All",       bg: "#f3f4f6", color: "#6b7280", activeBg: "#1a1a1a",  activeColor: "#fff" },
+  { value: "upcoming",  label: "Upcoming",  bg: "#ede5f7", color: "#6942b5", activeBg: "#6942b5",  activeColor: "#fff" },
+  { value: "completed", label: "Completed", bg: "#dcfce7", color: "#16a34a", activeBg: "#16a34a",  activeColor: "#fff" },
+  { value: "cancelled", label: "Cancelled", bg: "#f3f4f6", color: "#6b7280", activeBg: "#6b7280",  activeColor: "#fff" },
+];
+
 export default function AdminEventMap({ height = 460 }: { height?: number }) {
   const [viewState, setViewState] = useState({ longitude: -73.94, latitude: 40.72, zoom: 11 });
   const [clusters, setClusters] = useState<EventCluster[]>([]);
   const [resourceMarkers, setResourceMarkers] = useState<ResourceMarker[]>([]);
   const [selected, setSelected] = useState<EventCluster | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   useEffect(() => {
     async function load() {
@@ -136,10 +146,54 @@ export default function AdminEventMap({ height = 460 }: { height?: number }) {
     loadResources({ minLng: -74.1, minLat: 40.6, maxLng: -73.7, maxLat: 40.95 });
   }, []);
 
-  const totalEvents = clusters.reduce((s, c) => s + c.events.length, 0);
+  // Derive filtered clusters — recompute per-cluster stats so heatmap reflects filter
+  const filteredClusters: EventCluster[] = clusters.map((c) => {
+    const events = statusFilter === "all"
+      ? c.events
+      : c.events.filter((ev) =>
+          statusFilter === "upcoming"
+            ? ev.status === "upcoming" || ev.status === "active"
+            : ev.status === statusFilter
+        );
+    return {
+      ...c,
+      events,
+      totalVolunteers:  events.reduce((s, ev) => s + (ev.current_signup_count ?? 0), 0),
+      completedCount:   events.filter((ev) => ev.status === "completed").length,
+      upcomingCount:    events.filter((ev) => ev.status === "upcoming").length,
+      activeCount:      events.filter((ev) => ev.status === "active").length,
+      cancelledCount:   events.filter((ev) => ev.status === "cancelled").length,
+    };
+  }).filter((c) => c.events.length > 0);
+
+  const totalEvents = filteredClusters.reduce((s, c) => s + c.events.length, 0);
 
   return (
     <div style={{ width: "100%" }}>
+
+      {/* Status filter pills */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {FILTERS.map((f) => {
+          const active = statusFilter === f.value;
+          return (
+            <button
+              key={f.value}
+              onClick={() => { setStatusFilter(f.value); setSelected(null); }}
+              style={{
+                padding: "5px 14px", fontSize: 12, fontWeight: 600,
+                borderRadius: 99, border: "none", cursor: "pointer",
+                fontFamily: "inherit",
+                background: active ? f.activeBg : f.bg,
+                color: active ? f.activeColor : f.color,
+                transition: "background 0.15s, color 0.15s",
+                boxShadow: active ? "0 2px 8px rgba(0,0,0,0.15)" : "none",
+              }}
+            >
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Legend */}
       <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 20, marginBottom: 10 }}>
@@ -209,7 +263,7 @@ export default function AdminEventMap({ height = 460 }: { height?: number }) {
           ))}
 
           {/* Heatmap-style event cluster markers */}
-          {clusters.map((c) => {
+          {filteredClusters.map((c) => {
             const s = heatStyle(c.events.length);
             const isSelected = selected?.key === c.key;
             return (

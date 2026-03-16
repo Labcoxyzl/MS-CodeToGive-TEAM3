@@ -64,8 +64,21 @@ async def signup_for_event(event_id: str, body: AuthSignupRequest, current_user:
 
     # Prevent duplicate signups
     existing = db.table("event_signups").select("id, status").eq("event_id", event_id).eq("user_id", user_id).execute()
-    if existing.data and existing.data[0]["status"] != "cancelled":
-        raise HTTPException(status_code=409, detail="You are already signed up for this event")
+    if existing.data:
+        if existing.data[0]["status"] != "cancelled":
+            raise HTTPException(status_code=409, detail="You are already signed up for this event")
+        # Re-activate the cancelled signup rather than inserting (unique constraint on user+event)
+        now = datetime.now(timezone.utc).isoformat()
+        result = (
+            db.table("event_signups")
+            .update({"status": "registered", "signed_up_at": now, "referred_by_code": body.referral_code})
+            .eq("id", existing.data[0]["id"])
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to re-activate signup")
+        db.table("events").update({"current_signup_count": event["current_signup_count"] + 1}).eq("id", event_id).execute()
+        return result.data[0]
 
     now = datetime.now(timezone.utc).isoformat()
     insert_data = {
