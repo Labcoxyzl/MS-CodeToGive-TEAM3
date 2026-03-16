@@ -10,6 +10,7 @@ interface Props {
   onCancel: (id: string) => Promise<void>;
   isLoadingId: string | null;
   indexOffset?: number;
+  currentUserId?: string;
 }
 
 export default function EventGrid({
@@ -20,6 +21,7 @@ export default function EventGrid({
   onCancel,
   isLoadingId,
   indexOffset = 0,
+  currentUserId,
 }: Props) {
   return (
     <div className={styles.eventGrid}>
@@ -33,6 +35,7 @@ export default function EventGrid({
           onRegister={onRegister}
           onCancel={onCancel}
           isLoadingId={isLoadingId}
+          currentUserId={currentUserId}
         />
       ))}
     </div>

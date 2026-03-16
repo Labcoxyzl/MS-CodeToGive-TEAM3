@@ -118,6 +118,27 @@
   opacity: 1;
 }
 
+.manageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: var(--lt-radius-sm);
+  background: var(--lt-purple);
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--lt-transition), transform var(--lt-transition);
+}
+
+.manageBtn:hover {
+  background: var(--lt-purple-hover);
+  transform: translateY(-1px);
+}
+
 .pastOverlay {
   position: absolute;
   inset: 0;

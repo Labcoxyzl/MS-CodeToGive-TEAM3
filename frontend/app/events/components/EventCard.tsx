@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { Map, Marker } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -19,6 +20,7 @@ interface Props {
   onRegister: (id: string) => Promise<void>;
   onCancel: (id: string) => Promise<void>;
   isLoadingId: string | null;
+  currentUserId?: string;
 }
 
 export default function EventCard({
@@ -29,6 +31,7 @@ export default function EventCard({
   onRegister,
   onCancel,
   isLoadingId,
+  currentUserId,
 }: Props) {
   const gradient = eventGradient(event.title);
   const [isVisible, setIsVisible] = useState(false);
@@ -125,14 +128,24 @@ export default function EventCard({
               {event.latitude && event.longitude && (
                 <FlyerButton eventId={event.id} small />
               )}
-              <RegisterButton
-                eventId={event.id}
-                isRegistered={event.isRegistered}
-                isLoadingExternal={isLoadingId === event.id}
-                onRegister={onRegister}
-                onCancel={onCancel}
-                small
-              />
+              {currentUserId && event.createdBy === currentUserId ? (
+                <Link
+                  href={`/events/${event.id}/manage`}
+                  onClick={(e) => e.stopPropagation()}
+                  className={styles.manageBtn}
+                >
+                  Manage
+                </Link>
+              ) : (
+                <RegisterButton
+                  eventId={event.id}
+                  isRegistered={event.isRegistered}
+                  isLoadingExternal={isLoadingId === event.id}
+                  onRegister={onRegister}
+                  onCancel={onCancel}
+                  small
+                />
+              )}
             </div>
           )}
         </div>

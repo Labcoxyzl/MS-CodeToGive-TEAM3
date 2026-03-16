@@ -12,6 +12,7 @@ interface Props {
   onCancel: (id: string) => Promise<void>;
   isLoadingId: string | null;
   indexOffset?: number;
+  currentUserId?: string;
 }
 
 const CARD_WIDTH = 300;
@@ -23,6 +24,7 @@ export default function HorizontalScrollRow({
   onCancel,
   isLoadingId,
   indexOffset = 0,
+  currentUserId,
 }: Props) {
   const rowRef = useRef<HTMLDivElement>(null);
 
@@ -52,6 +54,7 @@ export default function HorizontalScrollRow({
               onRegister={onRegister}
               onCancel={onCancel}
               isLoadingId={isLoadingId}
+              currentUserId={currentUserId}
             />
           </div>
         ))}

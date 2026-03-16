@@ -18,10 +18,11 @@ function isThisMonth(dateStr: string): boolean {
   return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth();
 }
 
-export function filterEvents(events: Event[], filters: FilterState): Event[] {
+export function filterEvents(events: Event[], filters: FilterState, currentUserId?: string): Event[] {
   return events.filter((ev) => {
     // Tab filter
     if (filters.tab === "registered" && !ev.isRegistered) return false;
+    if (filters.tab === "my-events" && ev.createdBy !== currentUserId) return false;
 
     // Search query
     if (filters.q.trim()) {

@@ -21,7 +21,13 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
   }
 
   const hasActiveFilters =
-    filters.q || filters.dateRange || filters.tab === "registered";
+    filters.q || filters.dateRange || filters.tab === "registered" || filters.tab === "my-events";
+
+  const TABS = [
+    { value: "", label: "All" },
+    { value: "registered", label: "Registered" },
+    { value: "my-events", label: "My Events" },
+  ];
 
   return (
     <div className={styles.filters}>
@@ -52,13 +58,13 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
 
       {/* Quick-filter chips */}
       <div className={styles.chips}>
-        {(["all", "registered"] as const).map((tab) => (
+        {TABS.map(({ value, label }) => (
           <button
-            key={tab}
-            className={`${styles.chip} ${filters.tab === tab || (tab === "all" && !filters.tab) ? styles.chipActive : ""}`}
-            onClick={() => onChange({ tab: tab === "all" ? "" : tab })}
+            key={value}
+            className={`${styles.chip} ${filters.tab === value || (!filters.tab && value === "") ? styles.chipActive : ""}`}
+            onClick={() => onChange({ tab: value })}
           >
-            {tab === "all" ? "All" : "Registered"}
+            {label}
           </button>
         ))}
       </div>

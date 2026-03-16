@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { Map, Marker } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -14,9 +15,10 @@ interface Props {
   onRegister: (id: string) => Promise<void>;
   onCancel: (id: string) => Promise<void>;
   isLoadingId: string | null;
+  currentUserId?: string;
 }
 
-export default function EventHeroCard({ event, onRegister, onCancel, isLoadingId }: Props) {
+export default function EventHeroCard({ event, onRegister, onCancel, isLoadingId, currentUserId }: Props) {
   const gradient = eventGradient(event.title);
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,13 +88,31 @@ export default function EventHeroCard({ event, onRegister, onCancel, isLoadingId
           )}
         </div>
         <div className={styles.regWrap}>
-          <RegisterButton
-            eventId={event.id}
-            isRegistered={event.isRegistered}
-            isLoadingExternal={isLoadingId === event.id}
-            onRegister={onRegister}
-            onCancel={onCancel}
-          />
+          {currentUserId && event.createdBy === currentUserId ? (
+            <Link
+              href={`/events/${event.id}/manage`}
+              style={{
+                padding: "8px 16px",
+                background: "rgba(255,255,255,0.15)",
+                color: "#fff",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                textDecoration: "none",
+                backdropFilter: "blur(4px)",
+              }}
+            >
+              Manage Event →
+            </Link>
+          ) : (
+            <RegisterButton
+              eventId={event.id}
+              isRegistered={event.isRegistered}
+              isLoadingExternal={isLoadingId === event.id}
+              onRegister={onRegister}
+              onCancel={onCancel}
+            />
+          )}
         </div>
       </div>
     </div>

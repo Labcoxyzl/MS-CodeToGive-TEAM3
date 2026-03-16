@@ -46,6 +46,19 @@ export default function EventsPageClient() {
     return !!localStorage.getItem("access_token");
   });
 
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+      const id = JSON.parse(atob(token.split(".")[1])).sub ?? "";
+      setCurrentUserId(id);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthorized) {
       router.push("/login");
@@ -97,7 +110,7 @@ export default function EventsPageClient() {
         }
       }
 
-      router.replace(`/event?${params.toString()}`);
+      router.replace(`/events?${params.toString()}`);
     },
     [searchParams, router]
   );
@@ -140,12 +153,12 @@ export default function EventsPageClient() {
   }, [events]);
 
   const thisWeekFiltered = useMemo(
-    () => filterEvents(thisWeekEvents, filters),
-    [thisWeekEvents, filters]
+    () => filterEvents(thisWeekEvents, filters, currentUserId),
+    [thisWeekEvents, filters, currentUserId]
   );
   const comingUpFiltered = useMemo(
-    () => filterEvents(comingUpEvents, filters),
-    [comingUpEvents, filters]
+    () => filterEvents(comingUpEvents, filters, currentUserId),
+    [comingUpEvents, filters, currentUserId]
   );
 
   if (!isAuthorized) return null;
@@ -220,6 +233,7 @@ export default function EventsPageClient() {
                   onRegister={register}
                   onCancel={cancel}
                   isLoadingId={loadingId}
+                  currentUserId={currentUserId}
                 />
               )}
 
@@ -232,6 +246,7 @@ export default function EventsPageClient() {
                   onRegister={register}
                   onCancel={cancel}
                   isLoadingId={loadingId}
+                  currentUserId={currentUserId}
                 />
               ) : (
                 <EmptyState onClearFilters={handleClearFilters} />
@@ -247,6 +262,7 @@ export default function EventsPageClient() {
                   onCancel={cancel}
                   isLoadingId={loadingId}
                   indexOffset={thisWeekFiltered.length}
+                  currentUserId={currentUserId}
                 />
               ) : (
                 <EmptyState onClearFilters={handleClearFilters} />
@@ -268,6 +284,7 @@ export default function EventsPageClient() {
                   onCancel={cancel}
                   isLoadingId={loadingId}
                   indexOffset={thisWeekFiltered.length + comingUpFiltered.length}
+                  currentUserId={currentUserId}
                 />
               )}
             </>
