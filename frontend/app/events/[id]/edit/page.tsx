@@ -31,7 +31,6 @@ const C = {
 };
 
 const LANGUAGES = ['English','Spanish','Chinese (Simplified)','Chinese (Traditional)','Bengali','Russian','Haitian Creole','Korean','Arabic','Urdu','Polish','Yiddish','French','Tagalog','Italian','Portuguese','Hindi','Japanese','Greek','Albanian','Other'];
-
 const FLYER_LANG_MAP: Record<string, string> = { en: 'English', es: 'Spanish' };
 
 const IB: React.CSSProperties = {
@@ -161,7 +160,6 @@ export default function EditEventPage() {
   const params = useParams();
   const eventId = params?.id as string;
 
-
   const [form, setForm] = useState<Form>(INIT);
   const [busy, setBusy] = useState(false);
   const [loadingEvent, setLoadingEvent] = useState(true);
@@ -171,6 +169,9 @@ export default function EditEventPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userState, setUserState] = useState({ name: '', initials: '', role: '' });
   const [userLoading, setUserLoading] = useState(true);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [selectedMapResource, setSelectedMapResource] = useState<any>(null);
+  const [loadingMapResource, setLoadingMapResource] = useState(false);
 
   const [locationSuggestions, setLocationSuggestions] = useState<{display_name:string;lat:string;lon:string}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -181,8 +182,11 @@ export default function EditEventPage() {
   const [mapMarkers, setMapMarkers] = useState<{id:string;lng:number;lat:number;type:string}[]>([]);
   const [viewState, setViewState] = useState({longitude:-73.9857,latitude:40.7128,zoom:12});
 
-  const ch = (e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) =>
-    setForm(p => ({...p, [e.target.name]: e.target.value}));
+  const ch = (e: React.ChangeEvent<HTMLInputElement|HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm(p => ({...p, [name]: value}));
+    setFieldErrors(prev => { const next = {...prev}; delete next[name]; return next; });
+  };
 
   // Load user info
   useEffect(() => {
@@ -227,14 +231,36 @@ export default function EditEventPage() {
           setGeocodedCoords({ lat: ev.latitude, lng: ev.longitude });
           setViewState(s => ({ ...s, longitude: ev.longitude, latitude: ev.latitude, zoom: 15 }));
         }
+        // Pre-populate resource info if event has one
+        if (ev.resource_id) {
+          setLoadingMapResource(true);
+          fetch(`https://platform.foodhelpline.org/api/resources/${ev.resource_id}`)
+            .then(r => r.json())
+            .then(raw => setSelectedMapResource(raw.json ?? raw))
+            .catch(() => {})
+            .finally(() => setLoadingMapResource(false));
+        }
       } catch { setErr('Network error loading event.'); }
       finally { setLoadingEvent(false); }
     })();
   }, [eventId]);
 
+  // Load initial map markers
+  useEffect(() => {
+    loadMarkers({minLng:-74.1,minLat:40.6,maxLng:-73.7,maxLat:40.9});
+  }, []);
+
+  // Fly to coords when address is picked
+  useEffect(() => {
+    if (geocodedCoords && mapRef.current) {
+      mapRef.current.flyTo({center:[geocodedCoords.lng, geocodedCoords.lat], zoom:15});
+    }
+  }, [geocodedCoords]);
+
   function onAddressChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
     setForm(p => ({...p, locationAddress: val}));
+    setFieldErrors(prev => { const next = {...prev}; delete next.locationAddress; return next; });
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!val.trim()) { setLocationSuggestions([]); setShowSuggestions(false); return; }
     debounceRef.current = setTimeout(async () => {
@@ -284,22 +310,56 @@ export default function EditEventPage() {
     } catch { /* ignore */ }
   }
 
-  async function pickMarker(lng: number, lat: number) {
-    try {
-      const r = await fetch(
+  async function pickMarker(lng: number, lat: number, resourceId?: string) {
+    setSelectedMapResource(null);
+    setGeocodedCoords({lat, lng});
+    setShowSuggestions(false);
+
+    const [resourceResult] = await Promise.allSettled([
+      resourceId
+        ? fetch(`https://platform.foodhelpline.org/api/resources/${resourceId}`)
+            .then(r => r.json())
+            .then(raw => raw.json ?? raw)
+        : Promise.resolve(null),
+      fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
         { headers: { 'User-Agent': 'lemontree-volunteer-app' } }
-      );
-      const d = await r.json();
-      const addr = d.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      setForm(p => ({...p, locationAddress: addr}));
-      setGeocodedCoords({lat, lng});
-      setShowSuggestions(false);
-    } catch { /* ignore */ }
+      )
+        .then(r => r.json())
+        .then(d => { setForm(p => ({...p, locationAddress: d.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`})); })
+        .catch(() => { setForm(p => ({...p, locationAddress: `${lat.toFixed(5)}, ${lng.toFixed(5)}`})); }),
+    ]);
+
+    if (resourceResult.status === 'fulfilled' && resourceResult.value) {
+      setSelectedMapResource(resourceResult.value);
+    }
+  }
+
+  function validate(): Record<string, string> {
+    const errors: Record<string, string> = {};
+    if (!form.title.trim()) errors.title = 'Event title is required.';
+    if (!form.date) {
+      errors.date = 'Date is required.';
+    }
+    if (!form.startTime) errors.startTime = 'Start time is required.';
+    if (!form.endTime) {
+      errors.endTime = 'End time is required.';
+    } else if (form.startTime && form.endTime <= form.startTime) {
+      errors.endTime = 'End time must be after start time.';
+    }
+    if (!form.locationAddress.trim()) errors.locationAddress = 'Location is required.';
+    if (form.volunteers.trim()) {
+      const n = parseInt(form.volunteers, 10);
+      if (isNaN(n) || n < 1) errors.volunteers = 'Volunteer limit must be a number ≥ 1.';
+    }
+    return errors;
   }
 
   async function submit() {
-    if (!form.title.trim()) { setErr('Please add an event title.'); return; }
+    const errors = validate();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     setBusy(true); setErr(null);
     try {
       const token = localStorage.getItem('access_token');
@@ -308,7 +368,6 @@ export default function EditEventPage() {
       let latitude: number | null = geocodedCoords?.lat ?? null;
       let longitude: number | null = geocodedCoords?.lng ?? null;
 
-      // Re-geocode only if address changed without picking from map/suggestions
       if (form.locationAddress.trim() && !geocodedCoords) {
         const geo = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.locationAddress)}&format=json&limit=1`,
@@ -338,6 +397,7 @@ export default function EditEventPage() {
           volunteer_limit: form.volunteers.trim() ? parseInt(form.volunteers) : null,
           visibility:      form.visibility,
           flyer_language:  form.flyerLanguage === 'Spanish' ? 'es' : 'en',
+          resource_id:     selectedMapResource?.id ?? null,
         }),
       });
       if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.detail || `Error ${res.status}`); }
@@ -418,7 +478,8 @@ export default function EditEventPage() {
             <div style={{background:C.tealCard,padding:'14px 18px'}}>
               <FInput type="text" name="title" value={form.title} onChange={ch}
                 placeholder="e.g. Crown Heights Community Food Drive"
-                xStyle={{fontSize:20,fontWeight:700,padding:'12px 14px'}} />
+                xStyle={{fontSize:20,fontWeight:700,padding:'12px 14px',...(fieldErrors.title?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{})}} />
+              {fieldErrors.title && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.title}</p>}
             </div>
           </div>
 
@@ -436,19 +497,31 @@ export default function EditEventPage() {
               </Card>
 
               <Card accent={C.purple} bg={C.tealCard} title="Date & Time">
-                <Field label="Date">
-                  <FInput type="date" name="date" value={form.date} onChange={ch} />
+                <Field label="Date *">
+                  <FInput type="date" name="date" value={form.date} onChange={ch}
+                    xStyle={fieldErrors.date?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                  {fieldErrors.date && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.date}</p>}
                 </Field>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                  <Field label="Start Time" mb={0}><FInput type="time" name="startTime" value={form.startTime} onChange={ch} /></Field>
-                  <Field label="End Time"   mb={0}><FInput type="time" name="endTime"   value={form.endTime}   onChange={ch} /></Field>
+                  <Field label="Start Time *" mb={0}>
+                    <FInput type="time" name="startTime" value={form.startTime} onChange={ch}
+                      xStyle={fieldErrors.startTime?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                    {fieldErrors.startTime && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.startTime}</p>}
+                  </Field>
+                  <Field label="End Time *" mb={0}>
+                    <FInput type="time" name="endTime" value={form.endTime} onChange={ch}
+                      xStyle={fieldErrors.endTime?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                    {fieldErrors.endTime && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.endTime}</p>}
+                  </Field>
                 </div>
               </Card>
 
               <Card accent={C.purple} bg={C.tealCard} title="Capacity">
                 <Field label="Volunteer Limit" mb={0}>
                   <FInput type="number" name="volunteers" value={form.volunteers} onChange={ch}
-                    min="1" placeholder="Leave blank for unlimited" />
+                    min="1" placeholder="Leave blank for unlimited"
+                    xStyle={fieldErrors.volunteers?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                  {fieldErrors.volunteers && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.volunteers}</p>}
                 </Field>
               </Card>
 
@@ -458,11 +531,12 @@ export default function EditEventPage() {
             <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
               <Card accent={C.purple} bg={C.tealCard} title="Location">
-                <Field label="Address">
+                <Field label="Address *">
                   <div ref={suggestionWrapRef} style={{position:'relative'}}>
                     <FInput type="text" name="locationAddress" value={form.locationAddress}
                       onChange={onAddressChange} placeholder="e.g. 123 Main St, Brooklyn, NY"
-                      autoComplete="off" />
+                      autoComplete="off"
+                      xStyle={fieldErrors.locationAddress?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
                     {showSuggestions && locationSuggestions.length > 0 && (
                       <ul style={{
                         position:'absolute',zIndex:100,width:'100%',marginTop:3,
@@ -482,6 +556,7 @@ export default function EditEventPage() {
                       </ul>
                     )}
                   </div>
+                  {fieldErrors.locationAddress && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.locationAddress}</p>}
                 </Field>
                 <div style={{position:'relative',width:'100%',height:250,borderRadius:5,border:`2px solid ${C.inputBorder}`,overflow:'hidden'}}>
                   <MapGL
@@ -499,7 +574,7 @@ export default function EditEventPage() {
                     {mapMarkers.map(m => (
                       <Marker key={m.id} longitude={m.lng} latitude={m.lat} anchor="center">
                         <div
-                          onClick={() => pickMarker(m.lng, m.lat)}
+                          onClick={() => pickMarker(m.lng, m.lat, m.id)}
                           title={`${m.type==='SOUP_KITCHEN'?'Soup Kitchen':'Food Pantry'} — click to select`}
                           style={{width:14,height:14,borderRadius:'50%',border:'2px solid white',background:m.type==='SOUP_KITCHEN'?'#E86F51':'#6942b5',boxShadow:'0 1px 4px rgba(0,0,0,0.4)',cursor:'pointer'}}
                           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1.6)';}}
@@ -521,6 +596,49 @@ export default function EditEventPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Selected resource info panel */}
+                {(loadingMapResource || selectedMapResource) && (
+                  <div style={{marginTop:10,padding:'12px 14px',background:'white',borderRadius:6,border:`1.5px solid ${C.inputBorder}`,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',position:'relative'}}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMapResource(null)}
+                      style={{position:'absolute',top:8,right:10,background:'none',border:'none',fontSize:15,cursor:'pointer',color:'#999',lineHeight:1}}
+                    >✕</button>
+                    {loadingMapResource ? (
+                      <div style={{display:'flex',justifyContent:'center',padding:'8px 0'}}>
+                        <div className="lt-spinner" style={{width:24,height:24,borderTopColor:C.purple}} />
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{marginBottom:6}}>
+                          <span style={{
+                            fontSize:10,fontWeight:700,textTransform:'uppercase' as const,letterSpacing:0.5,
+                            padding:'2px 8px',borderRadius:99,
+                            background: selectedMapResource?.resourceType?.id === 'SOUP_KITCHEN' ? '#fde8e2' : '#ede5f7',
+                            color:       selectedMapResource?.resourceType?.id === 'SOUP_KITCHEN' ? '#fd5839' : C.purple,
+                          }}>
+                            {selectedMapResource?.resourceType?.name ?? 'Food Resource'}
+                          </span>
+                        </div>
+                        <p style={{fontSize:14,fontWeight:700,color:C.text,margin:'0 0 4px'}}>
+                          {selectedMapResource?.name ?? 'Selected Resource'}
+                        </p>
+                        {(selectedMapResource?.addressStreet1 || selectedMapResource?.city) && (
+                          <p style={{fontSize:12,color:C.textSec,margin:0}}>
+                            {[selectedMapResource?.addressStreet1, selectedMapResource?.city, selectedMapResource?.state]
+                              .filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                        {selectedMapResource?.contacts?.[0]?.phone && (
+                          <p style={{fontSize:12,color:C.textSec,margin:'3px 0 0'}}>
+                            {selectedMapResource.contacts[0].phone}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </Card>
 
               <Card accent={C.purple} bg={C.tealCard} title="Flyer">
