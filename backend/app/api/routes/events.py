@@ -32,7 +32,7 @@ class EventCreate(BaseModel):
     pantry_mode: Literal["none", "nearby_resources", "single_resource"] = "none"
     resource_count: int | None = None     # used when pantry_mode = "nearby_resources"
     resource_id: str | None = None        # Lemontree API resource ID for single_resource mode
-    flyer_language: Literal["en", "es"] = "en"
+    flyer_language: Literal["en", "es", "fr", "pt", "it", "pl", "ht", "tl"] = "en"
 
 
 class EventUpdate(BaseModel):
@@ -50,7 +50,7 @@ class EventUpdate(BaseModel):
     pantry_mode: Literal["none", "nearby_resources", "single_resource"] | None = None
     resource_count: int | None = None
     resource_id: str | None = None
-    flyer_language: Literal["en", "es"] | None = None
+    flyer_language: Literal["en", "es", "fr", "pt", "it", "pl", "ht", "tl"] | None = None
 
 
 class EventResponse(BaseModel):

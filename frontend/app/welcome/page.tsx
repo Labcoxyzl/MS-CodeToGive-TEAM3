@@ -648,17 +648,17 @@ return (
         {/* Features */}
         <section className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 py-16 px-6">
           {/* ABOUT US */}
-          <div className="bg-[#06bcb1] text-white rounded-xl shadow-lg p-8 flex flex-col justify-between min-h-[320px]">
+          <div className="bg-[#2E8B7A] text-white rounded-xl shadow-lg p-8 flex flex-col justify-between min-h-[320px]">
             <div>
               <h3 className="text-xl font-bold mb-3">About Us</h3>
-              <p className="text-sm opacity-90 leading-relaxed">
+              <p className="text-sm opacity-80 leading-relaxed">
                 Learn about Lemontree&apos;s mission to connect communities with nearby food
                 resources and empower volunteers to make a meaningful impact.
               </p>
             </div>
 
             <Link href="https://www.foodhelpline.org/about" className="mt-8">
-              <button className="bg-[#77d1cb] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#06bcb1] transition">
+              <button className="bg-[#2D2A26] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#2D2A26] transition">
                 Learn More
               </button>
             </Link>
@@ -668,31 +668,31 @@ return (
           <div className="bg-[#fd5839] text-white rounded-xl shadow-lg p-8 flex flex-col justify-between">
             <div>
               <h3 className="text-xl font-bold mb-3">Organize Events</h3>
-              <p className="text-sm opacity-90">
+              <p className="text-sm opacity-80">
                 Coordinate volunteer events, manage food drives, and collaborate with local
                 organizations to support community food access.
               </p>
             </div>
 
             <Link href="/events">
-              <button className="bg-[#f5917f] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#f5917f] transition">
+              <button className="bg-[#2D2A26] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#2D2A26] transition">
                 View Events
               </button>
             </Link>
           </div>
 
           {/* EARN POINTS */}
-          <div className="bg-[#754bc5] text-white rounded-xl shadow-lg p-8 flex flex-col justify-between">
+          <div className="bg-[#6B46C1] text-white rounded-xl shadow-lg p-8 flex flex-col justify-between">
             <div>
               <h3 className="text-xl font-bold mb-3">Earn Points</h3>
-              <p className="text-sm opacity-90">
+              <p className="text-sm opacity-80">
                 Track your volunteer contributions, earn reward points, and celebrate milestones
                 while helping communities access essential food resources.
               </p>
             </div>
 
-            <Link href="/points">
-              <button className="bg-[#8767c2] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#8767c2] transition">
+            <Link href="/community/leaders">
+              <button className="bg-[#2D2A26] text-white px-6 py-3 rounded-full hover:bg-white hover:text-[#2D2A26] transition">
                 See Rewards
               </button>
             </Link>

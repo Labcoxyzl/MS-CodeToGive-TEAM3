@@ -9,6 +9,8 @@ import MapGL, { Marker, MapRef } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import Sidebar from '@/app/components/ui/Sidebar';
+import EventDatePicker from '@/app/components/ui/EventDatePicker';
+import TimePicker from '@/app/components/ui/TimePicker';
 import styles from '@/app/dashboard/dashboard.module.css';
 
 // ─── Brand tokens ──────────────────────────────────────────────────────────────
@@ -31,7 +33,10 @@ const C = {
 };
 
 const LANGUAGES = ['English','Spanish','Chinese (Simplified)','Chinese (Traditional)','Bengali','Russian','Haitian Creole','Korean','Arabic','Urdu','Polish','Yiddish','French','Tagalog','Italian','Portuguese','Hindi','Japanese','Greek','Albanian','Other'];
-const FLYER_LANG_MAP: Record<string, string> = { en: 'English', es: 'Spanish' };
+const FLYER_LANG_MAP: Record<string, string> = {
+  en: 'English', es: 'Spanish', fr: 'French', pt: 'Portuguese',
+  it: 'Italian', pl: 'Polish', ht: 'Haitian Creole', tl: 'Tagalog',
+};
 
 const IB: React.CSSProperties = {
   width:'100%', padding:'10px 13px', fontSize:'14px',
@@ -396,7 +401,10 @@ export default function EditEventPage() {
           longitude,
           volunteer_limit: form.volunteers.trim() ? parseInt(form.volunteers) : null,
           visibility:      form.visibility,
-          flyer_language:  form.flyerLanguage === 'Spanish' ? 'es' : 'en',
+          flyer_language:  ({
+            'Spanish': 'es', 'French': 'fr', 'Portuguese': 'pt',
+            'Italian': 'it', 'Polish': 'pl', 'Haitian Creole': 'ht', 'Tagalog': 'tl',
+          } as Record<string,string>)[form.flyerLanguage] ?? 'en',
           resource_id:     selectedMapResource?.id ?? null,
         }),
       });
@@ -421,14 +429,6 @@ export default function EditEventPage() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className={styles.dashboardMain} style={{ background: '#fef6df', minHeight: '100vh' }}>
-        <style>{`
-          input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(30%) sepia(80%) saturate(500%) hue-rotate(240deg) brightness(80%);
-            cursor: pointer; opacity: 0.7;
-          }
-          input[type="date"]::-webkit-datetime-edit { color: #2D2A26; }
-        `}</style>
-
         {/* ── Top Bar ── */}
         <div className={styles.topBar}>
           <Link href="/" className="lt-header__logo">
@@ -498,19 +498,32 @@ export default function EditEventPage() {
 
               <Card accent={C.purple} bg={C.tealCard} title="Date & Time">
                 <Field label="Date *">
-                  <FInput type="date" name="date" value={form.date} onChange={ch}
-                    xStyle={fieldErrors.date?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                  <EventDatePicker
+                    value={form.date}
+                    onChange={(v) => setForm(f => ({ ...f, date: v }))}
+                    hasError={!!fieldErrors.date}
+                    disablePast={false}
+                  />
                   {fieldErrors.date && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.date}</p>}
                 </Field>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                   <Field label="Start Time *" mb={0}>
-                    <FInput type="time" name="startTime" value={form.startTime} onChange={ch}
-                      xStyle={fieldErrors.startTime?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                    <TimePicker
+                      value={form.startTime}
+                      onChange={(v) => setForm(f => ({ ...f, startTime: v }))}
+                      hasError={!!fieldErrors.startTime}
+                      placeholder="Start time"
+                    />
                     {fieldErrors.startTime && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.startTime}</p>}
                   </Field>
                   <Field label="End Time *" mb={0}>
-                    <FInput type="time" name="endTime" value={form.endTime} onChange={ch}
-                      xStyle={fieldErrors.endTime?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                    <TimePicker
+                      value={form.endTime}
+                      onChange={(v) => setForm(f => ({ ...f, endTime: v }))}
+                      hasError={!!fieldErrors.endTime}
+                      placeholder="End time"
+                      minTime={form.startTime}
+                    />
                     {fieldErrors.endTime && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.endTime}</p>}
                   </Field>
                 </div>

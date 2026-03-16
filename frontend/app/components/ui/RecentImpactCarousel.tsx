@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { RecentEvent } from "@/app/dashboard/mockData";
 import cardStyles from "@/app/events/components/EventCard.module.css";
@@ -23,17 +23,29 @@ interface RecentImpactCarouselProps {
 
 export default function RecentImpactCarousel({ events }: RecentImpactCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [cardWidth, setCardWidth] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const visibleCount = 3;
+  const gap = 16;
   const maxIndex = Math.max(0, events.length - visibleCount);
+
+  useEffect(() => {
+    function updateWidth() {
+      if (!wrapperRef.current) return;
+      const w = wrapperRef.current.clientWidth;
+      setCardWidth((w - gap * (visibleCount - 1)) / visibleCount);
+    }
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   function scrollToIndex(index: number) {
     if (!wrapperRef.current) return;
-    const wrapper = wrapperRef.current;
-    const step = wrapper.clientWidth / visibleCount + 5;
-    wrapper.scrollTo({ left: index * step, behavior: "smooth" });
+    const cw = cardWidth || (wrapperRef.current.clientWidth - gap * (visibleCount - 1)) / visibleCount;
+    wrapperRef.current.scrollTo({ left: index * (cw + gap), behavior: "smooth" });
   }
 
   function prev() {
@@ -66,6 +78,7 @@ export default function RecentImpactCarousel({ events }: RecentImpactCarouselPro
               <div
                 key={event.id}
                 className={`${cardStyles.card} ${styles.carouselCard}`}
+                style={cardWidth ? { width: cardWidth } : undefined}
                 onClick={() => router.push(`/events/${event.id}`)}
               >
                 <div className={cardStyles.imageWrapper}>

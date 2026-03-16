@@ -9,6 +9,8 @@ import MapGL, { Marker, MapRef } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import Sidebar from '@/app/components/ui/Sidebar';
+import EventDatePicker from '@/app/components/ui/EventDatePicker';
+import TimePicker from '@/app/components/ui/TimePicker';
 import styles from '@/app/dashboard/dashboard.module.css';
 
 // ─── Brand tokens ──────────────────────────────────────────────────────────────
@@ -494,7 +496,10 @@ export default function CreateEventPage() {
           longitude:       longitude,
           volunteer_limit: form.volunteers.trim() ? parseInt(form.volunteers) : null,
           visibility:      form.visibility,
-          flyer_language:  form.flyerLanguage === 'Spanish' ? 'es' : 'en',
+          flyer_language:  ({
+            'Spanish': 'es', 'French': 'fr', 'Portuguese': 'pt',
+            'Italian': 'it', 'Polish': 'pl', 'Haitian Creole': 'ht', 'Tagalog': 'tl',
+          } as Record<string,string>)[form.flyerLanguage] ?? 'en',
           pantry_mode:     'none',
           resource_count:  null,
           resource_id:     selectedMapResource?.id ?? null,
@@ -546,18 +551,6 @@ export default function CreateEventPage() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className={styles.dashboardMain} style={{ background: '#fef6df', minHeight: '100vh' }}>
-        {/* Date picker theming */}
-        <style>{`
-          input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(30%) sepia(80%) saturate(500%) hue-rotate(240deg) brightness(80%);
-            cursor: pointer;
-            opacity: 0.7;
-          }
-          input[type="date"]::-webkit-datetime-edit {
-            color: #2D2A26;
-          }
-        `}</style>
-
         {/* ── Top Bar ──────────────────────────────────────── */}
         <div className={styles.topBar}>
           <Link href="/" className="lt-header__logo">
@@ -617,7 +610,7 @@ export default function CreateEventPage() {
           <div style={{background:C.purple,padding:'9px 18px',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.8px',color:'white'}}>
             Event Title *
           </div>
-          <div style={{background:C.tealCard,padding:'14px 18px'}}>
+          <div style={{background:'#EFE6FA',padding:'14px 18px'}}>
             <FInput type="text" name="title" value={form.title} onChange={ch}
               placeholder="e.g. Crown Heights Community Food Drive"
               xStyle={{fontSize:20,fontWeight:700,padding:'12px 14px',...(fieldErrors.title?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{})}} />
@@ -631,34 +624,47 @@ export default function CreateEventPage() {
           {/* LEFT col */}
           <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
-            <Card accent={C.purple} bg={C.tealCard} title="About This Event">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="About This Event">
               <Field label="Description" mb={0}>
                 <FTextarea name="description" value={form.description} onChange={ch}
                   placeholder="Tell volunteers what to expect, what to bring, and any other details…" />
               </Field>
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Date & Time">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Date & Time">
               <Field label="Date *">
-                <FInput type="date" name="date" value={form.date} onChange={ch}
-                  xStyle={fieldErrors.date?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                <EventDatePicker
+                  value={form.date}
+                  onChange={(v) => setForm(f => ({ ...f, date: v }))}
+                  hasError={!!fieldErrors.date}
+                  disablePast
+                />
                 {fieldErrors.date && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.date}</p>}
               </Field>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
                 <Field label="Start Time *" mb={0}>
-                  <FInput type="time" name="startTime" value={form.startTime} onChange={ch}
-                    xStyle={fieldErrors.startTime?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                  <TimePicker
+                    value={form.startTime}
+                    onChange={(v) => setForm(f => ({ ...f, startTime: v }))}
+                    hasError={!!fieldErrors.startTime}
+                    placeholder="Start time"
+                  />
                   {fieldErrors.startTime && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.startTime}</p>}
                 </Field>
                 <Field label="End Time *" mb={0}>
-                  <FInput type="time" name="endTime" value={form.endTime} onChange={ch}
-                    xStyle={fieldErrors.endTime?{borderColor:'#D63B2F',boxShadow:'0 0 0 3px rgba(214,59,47,0.15)'}:{}} />
+                  <TimePicker
+                    value={form.endTime}
+                    onChange={(v) => setForm(f => ({ ...f, endTime: v }))}
+                    hasError={!!fieldErrors.endTime}
+                    placeholder="End time"
+                    minTime={form.startTime}
+                  />
                   {fieldErrors.endTime && <p style={{color:'#D63B2F',fontSize:12,margin:'5px 0 0',fontWeight:500}}>{fieldErrors.endTime}</p>}
                 </Field>
               </div>
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Capacity">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Capacity">
               <Field label="Volunteer Limit" mb={0}>
                 <FInput type="number" name="volunteers" value={form.volunteers} onChange={ch}
                   min="1" placeholder="Leave blank for unlimited"
@@ -672,7 +678,7 @@ export default function CreateEventPage() {
           {/* RIGHT col */}
           <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Location">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Location">
               <Field label="Address *">
                 <div ref={suggestionWrapRef} style={{position:'relative'}}>
                   <FInput type="text" name="locationAddress" value={form.locationAddress}
@@ -798,14 +804,14 @@ export default function CreateEventPage() {
               )}
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Flyer">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Flyer">
               <Field label="Flyer Language" mb={0}>
                 <Dropdown value={form.flyerLanguage} onChange={v=>setForm(p=>({...p,flyerLanguage:v}))}
                   placeholder="Select a language…" options={LANGUAGES} />
               </Field>
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Visibility">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Visibility">
               <div style={{display:'flex',gap:10,marginBottom:10}}>
                 {(['Public','Private'] as const).map(opt => {
                   const val = opt.toLowerCase() as 'public' | 'private';

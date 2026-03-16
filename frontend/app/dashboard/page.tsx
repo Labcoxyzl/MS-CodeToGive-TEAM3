@@ -13,8 +13,8 @@ import LeaderboardPreview from "@/app/components/ui/LeaderboardPreview";
 import type {
   RecentEvent,
   UpcomingEvent,
+  LeaderboardEntry,
 } from "./mockData";
-import { MOCK_LEADERBOARD } from "./mockData";
 import ResourceMap from "@/app/components/ui/ResourceMap";
 import styles from "./dashboard.module.css";
 
@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ eventsAttended: 0, upcomingEvents: 0, pointsEarned: 0 });
   const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [announcementToast, setAnnouncementToast] = useState<{ count: number; events: string[]; eventIds: string[] } | null>(null);
 
@@ -72,19 +73,42 @@ export default function DashboardPage() {
 
     async function fetchData() {
       try {
-        // 1. Fetch user data from backend (authoritative source)
+        // 1. Fetch user data, points, and leaderboard in parallel
         let currentUserName = "Volunteer";
-        const points = 0;
+        let points = 0;
 
-        const meRes = await fetch(`${API_URL}/api/v1/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const [meRes, pointsRes, lbRes] = await Promise.all([
+          fetch(`${API_URL}/api/v1/auth/me`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_URL}/api/v1/points/me`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`${API_URL}/api/v1/leaderboard?limit=4`),
+        ]);
+
         if (meRes.ok) {
           const meData = await meRes.json();
           if (typeof meData.name === "string" && meData.name) {
             currentUserName = meData.name;
           }
         }
+
+        if (pointsRes.ok) {
+          const ptData = await pointsRes.json();
+          if (typeof ptData.total_points === "number") points = ptData.total_points;
+        }
+
+        if (lbRes.ok) {
+          const lbData = await lbRes.json();
+          if (Array.isArray(lbData.leaders)) {
+            setLeaderboard(
+              lbData.leaders.map((l: { rank: number; name: string; total_points: number }) => ({
+                rank: l.rank,
+                name: l.name,
+                initials: getInitials(l.name),
+                points: l.total_points,
+              }))
+            );
+          }
+        }
+
         setUserState({ name: currentUserName, initials: getInitials(currentUserName) });
 
         // 2. Fetch joined events (from FastAPI)
@@ -239,7 +263,7 @@ export default function DashboardPage() {
               <div className="lt-spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--lt-color-brand-primary)' }} />
             ) : (
               <>
-                <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)" }}>{userState.initials}</div>
+                <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)", cursor: "pointer" }}>{userState.initials}</div>
                 <span>{userState.name}</span>
               </>
             )}
@@ -308,22 +332,22 @@ export default function DashboardPage() {
               {/* Stats Cards */}
               <div className={styles.statsRow}>
                 <StatsCard
-                  icon="✅"
+                  icon={<Image src="/handForDarkBackground.svg" alt="Events Attended" width={28} height={28} />}
                   value={stats.eventsAttended}
                   label="Events Attended"
-                  colorClass="lt-stat-card__icon--teal"
+                  colorClass="lt-stat-card__icon--purple-mid"
                 />
                 <StatsCard
-                  icon="📅"
+                  icon={<Image src="/vegetables.png" alt="Upcoming Events" width={28} height={28} />}
                   value={stats.upcomingEvents}
                   label="Upcoming Events"
-                  colorClass="lt-stat-card__icon--purple"
+                  colorClass="lt-stat-card__icon--purple-mid"
                 />
                 <StatsCard
-                  icon="⭐"
+                  icon={<Image src="/coin.png" alt="Points Earned" width={28} height={28} />}
                   value={stats.pointsEarned}
                   label="Points Earned"
-                  colorClass="lt-stat-card__icon--coral"
+                  colorClass="lt-stat-card__icon--purple-mid"
                 />
               </div>
 
@@ -337,7 +361,7 @@ export default function DashboardPage() {
                     )
                   }
                 />
-                <LeaderboardPreview entries={MOCK_LEADERBOARD} />
+                <LeaderboardPreview entries={leaderboard} />
               </div>
 
               {/* Food Resources Map */}

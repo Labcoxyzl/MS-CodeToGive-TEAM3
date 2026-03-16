@@ -102,7 +102,6 @@
 }
 
 .carouselCard {
-  min-width: calc(33.333% - 11px);
   flex-shrink: 0;
 }
 
@@ -134,10 +133,6 @@
   .statsRow {
     grid-template-columns: repeat(2, 1fr);
   }
-
-  .carouselCard {
-    min-width: calc(50% - 8px);
-  }
 }
 
 @media (max-width: 768px) {
@@ -156,10 +151,6 @@
 
   .bottomGrid {
     grid-template-columns: 1fr;
-  }
-
-  .carouselCard {
-    min-width: calc(100% - 0px);
   }
 
   .welcomeHeading {

@@ -17,6 +17,114 @@ from app.core.supabase import get_supabase_admin
 
 router = APIRouter(prefix="/flyer", tags=["flyer"])
 
+# ── Translations ───────────────────────────────────────────────────────────────
+_STRINGS: dict[str, dict[str, str]] = {
+    "en": {
+        "location":        "Location",
+        "date":            "Date",
+        "time":            "Time",
+        "volunteers":      "Volunteers",
+        "spots_available": "{n} spots available",
+        "open_to_all":     "Open to all",
+        "scan_to_sign_up": "Scan to sign up!",
+        "event_location":  "Event location",
+        "food_pantry":     "Food Pantry",
+        "soup_kitchen":    "Soup Kitchen",
+        "lang_attr":       "en",
+    },
+    "es": {
+        "location":        "Ubicación",
+        "date":            "Fecha",
+        "time":            "Hora",
+        "volunteers":      "Voluntarios",
+        "spots_available": "{n} lugares disponibles",
+        "open_to_all":     "Abierto a todos",
+        "scan_to_sign_up": "¡Escanea para registrarte!",
+        "event_location":  "Lugar del evento",
+        "food_pantry":     "Despensa de alimentos",
+        "soup_kitchen":    "Comedor comunitario",
+        "lang_attr":       "es",
+    },
+    "fr": {
+        "location":        "Lieu",
+        "date":            "Date",
+        "time":            "Heure",
+        "volunteers":      "Bénévoles",
+        "spots_available": "{n} places disponibles",
+        "open_to_all":     "Ouvert à tous",
+        "scan_to_sign_up": "Scannez pour vous inscrire !",
+        "event_location":  "Lieu de l'événement",
+        "food_pantry":     "Garde-manger",
+        "soup_kitchen":    "Soupe populaire",
+        "lang_attr":       "fr",
+    },
+    "pt": {
+        "location":        "Localização",
+        "date":            "Data",
+        "time":            "Horário",
+        "volunteers":      "Voluntários",
+        "spots_available": "{n} vagas disponíveis",
+        "open_to_all":     "Aberto a todos",
+        "scan_to_sign_up": "Escaneie para se inscrever!",
+        "event_location":  "Local do evento",
+        "food_pantry":     "Banco de alimentos",
+        "soup_kitchen":    "Cozinha comunitária",
+        "lang_attr":       "pt",
+    },
+    "it": {
+        "location":        "Luogo",
+        "date":            "Data",
+        "time":            "Orario",
+        "volunteers":      "Volontari",
+        "spots_available": "{n} posti disponibili",
+        "open_to_all":     "Aperto a tutti",
+        "scan_to_sign_up": "Scansiona per iscriverti!",
+        "event_location":  "Luogo dell'evento",
+        "food_pantry":     "Dispensa alimentare",
+        "soup_kitchen":    "Mensa popolare",
+        "lang_attr":       "it",
+    },
+    "pl": {
+        "location":        "Lokalizacja",
+        "date":            "Data",
+        "time":            "Godzina",
+        "volunteers":      "Wolontariusze",
+        "spots_available": "{n} miejsc dostępnych",
+        "open_to_all":     "Otwarte dla wszystkich",
+        "scan_to_sign_up": "Zeskanuj, aby się zapisać!",
+        "event_location":  "Miejsce wydarzenia",
+        "food_pantry":     "Spiżarnia żywnościowa",
+        "soup_kitchen":    "Jadłodajnia",
+        "lang_attr":       "pl",
+    },
+    "ht": {
+        "location":        "Kote",
+        "date":            "Dat",
+        "time":            "Lè",
+        "volunteers":      "Volontè",
+        "spots_available": "{n} plas disponib",
+        "open_to_all":     "Louvri pou tout moun",
+        "scan_to_sign_up": "Eskane pou enskri!",
+        "event_location":  "Kote evènman an",
+        "food_pantry":     "Pantri manje",
+        "soup_kitchen":    "Kizin kominotè",
+        "lang_attr":       "ht",
+    },
+    "tl": {
+        "location":        "Lokasyon",
+        "date":            "Petsa",
+        "time":            "Oras",
+        "volunteers":      "Mga Boluntaryo",
+        "spots_available": "{n} puwesto ang available",
+        "open_to_all":     "Bukas para sa lahat",
+        "scan_to_sign_up": "I-scan para mag-sign up!",
+        "event_location":  "Lugar ng event",
+        "food_pantry":     "Food pantry",
+        "soup_kitchen":    "Sopas na kusina",
+        "lang_attr":       "tl",
+    },
+}
+
 _TEMPLATES_DIR = Path(__file__).resolve().parents[2] / "templates"
 _ASSETS_DIR = Path(__file__).resolve().parents[4] / "assets"
 _jinja_env = Environment(loader=FileSystemLoader(str(_TEMPLATES_DIR)), autoescape=True)
@@ -153,13 +261,12 @@ async def _reverse_geocode(lat: float, lng: float) -> str:
             resp.raise_for_status()
             data = resp.json()
             addr = data.get("address", {})
-            parts = [
-                addr.get("road") or addr.get("pedestrian"),
-                addr.get("suburb") or addr.get("neighbourhood"),
-                addr.get("city") or addr.get("town") or addr.get("village"),
-                addr.get("state"),
-            ]
-            return ", ".join(p for p in parts if p)
+            line1 = ", ".join(p for p in [addr.get("road") or addr.get("pedestrian"),
+                                           addr.get("suburb") or addr.get("neighbourhood")] if p)
+            line2 = ", ".join(p for p in [addr.get("city") or addr.get("town") or addr.get("village"),
+                                           addr.get("state")] if p)
+            lines = [l for l in [line1, line2] if l]
+            return "\n".join(lines)
     except Exception:
         return ""
 
@@ -197,8 +304,12 @@ async def generate_flyer(event_id: str, current_user: CurrentUser):
     location_display = event.get("location_name") or await _reverse_geocode(
         event["latitude"], event["longitude"]
     )
+    address_line_count = len(location_display.splitlines()) if location_display else 1
 
     map_b64 = await _build_map_b64(event["latitude"], event["longitude"])
+
+    lang = event.get("flyer_language", "en")
+    t = _STRINGS.get(lang, _STRINGS["en"])
 
     template = _jinja_env.get_template("flyer.html")
     html = template.render(
@@ -210,7 +321,9 @@ async def generate_flyer(event_id: str, current_user: CurrentUser):
         start_time_fmt=start_fmt,
         end_time_fmt=end_fmt,
         location_display=location_display,
+        address_line_count=address_line_count,
         map_b64=map_b64,
+        t=t,
     )
 
     # 8. Convert to PDF

@@ -24,28 +24,22 @@ const C = {
   card:        '#fffdf7',
 };
 
-const TOP3 = [
-  { rank: 2, name: 'Jordan M.', points: 820,  avatar: 'JM', color: C.teal   },
-  { rank: 1, name: 'Alex T.',   points: 1240, avatar: 'AT', color: C.purple },
-  { rank: 3, name: 'Sam R.',    points: 640,  avatar: 'SR', color: C.coral  },
-];
+const RANK_COLORS = [C.purple, C.teal, C.coral];
 
-const ALL = [
-  { rank: 1, name: 'Alex T.',    xp: 1240, avatar: 'AT', color: C.purple },
-  { rank: 2, name: 'Jordan M.',  xp: 820,  avatar: 'JM', color: C.teal   },
-  { rank: 3, name: 'Sam R.',     xp: 640,  avatar: 'SR', color: C.coral  },
-  { rank: 4, name: 'Casey L.',   xp: 580,  avatar: 'CL', color: C.teal   },
-  { rank: 5, name: 'Morgan P.',  xp: 510,  avatar: 'MP', color: C.purple },
-  { rank: 6, name: 'Riley K.',   xp: 470,  avatar: 'RK', color: C.coral  },
-  { rank: 7, name: 'Taylor B.',  xp: 430,  avatar: 'TB', color: C.teal   },
-];
+function getInitials(name: string) {
+  if (!name) return 'V';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+}
 
-const SPOTLIGHT = {
-  name: 'Alex T.', role: 'Event Leader',
-  location: 'Crown Heights, Brooklyn',
-  events: 22, hours: 68, referred: 11,
-  avatar: 'AT', color: C.purple,
-};
+interface Leader {
+  rank: number;
+  name: string;
+  total_points: number;
+  avatar: string;
+  color: string;
+}
 
 const BADGES = [
   { label: 'First Event',     icon: '★', color: C.yellow,  earned: true  },
@@ -151,6 +145,28 @@ export default function LeaderboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userState, setUserState] = useState({ name: '', initials: '' });
   const [userLoading, setUserLoading] = useState(false);
+  const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [lbLoading, setLbLoading] = useState(true);
+
+  useEffect(() => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+    fetch(`${API_URL}/api/v1/leaderboard?limit=20`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.leaders && Array.isArray(data.leaders)) {
+          setLeaders(
+            data.leaders.map((l: { rank: number; name: string; total_points: number }) => ({
+              rank: l.rank,
+              name: l.name,
+              total_points: l.total_points,
+              avatar: getInitials(l.name),
+              color: RANK_COLORS[(l.rank - 1) % RANK_COLORS.length],
+            }))
+          );
+        }
+      })
+      .finally(() => setLbLoading(false));
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -267,76 +283,93 @@ export default function LeaderboardPage() {
                   ))}
                 </div>
 
-                {/* Podium — #2 left, #1 centre (tallest), #3 right */}
-                <div style={{
-                  display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                  gap: 8, marginBottom: 24, paddingBottom: 20,
-                  borderBottom: `1px solid ${C.border}`,
-                }}>
-                  {TOP3.map((v) => {
-                    const isFirst = v.rank === 1;
-                    const blockH = isFirst ? 88 : 64;
-                    const avatarSz = isFirst ? 56 : 44;
-                    return (
-                      <div key={v.rank} style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {isFirst && <TrophyIcon size={13} color={C.purple} />}
-                          <span style={{
-                            fontSize: 11, fontWeight: 700, color: isFirst ? C.purple : C.textMuted,
-                            textTransform: 'uppercase', letterSpacing: '0.5px',
-                          }}>#{v.rank}</span>
-                        </div>
-                        <Avatar initials={v.avatar} color={v.color} size={avatarSz} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{v.name}</span>
+                {lbLoading ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                    <div className="lt-spinner" style={{ width: 32, height: 32, borderTopColor: C.purple }} />
+                  </div>
+                ) : leaders.length === 0 ? (
+                  <p style={{ textAlign: 'center', color: C.textMuted, fontSize: 13, padding: '24px 0' }}>
+                    No leaderboard data yet.
+                  </p>
+                ) : (
+                  <>
+                    {/* Podium — #2 left, #1 centre (tallest), #3 right */}
+                    {leaders.length >= 3 && (() => {
+                      const podium = [leaders[1], leaders[0], leaders[2]]; // [#2, #1, #3]
+                      return (
                         <div style={{
-                          width: isFirst ? 96 : 80, height: blockH,
-                          background: isFirst ? C.purple : C.blush,
-                          borderRadius: '4px 4px 0 0',
-                          display: 'flex', flexDirection: 'column',
-                          alignItems: 'center', justifyContent: 'center', gap: 2,
-                          border: `1px solid ${isFirst ? C.purpleMid : C.border}`,
-                          borderBottom: 'none',
+                          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                          gap: 8, marginBottom: 24, paddingBottom: 20,
+                          borderBottom: `1px solid ${C.border}`,
+                        }}>
+                          {podium.map((v) => {
+                            const isFirst = v.rank === 1;
+                            const blockH = isFirst ? 88 : 64;
+                            const avatarSz = isFirst ? 56 : 44;
+                            return (
+                              <div key={v.rank} style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  {isFirst && <TrophyIcon size={13} color={C.purple} />}
+                                  <span style={{
+                                    fontSize: 11, fontWeight: 700, color: isFirst ? C.purple : C.textMuted,
+                                    textTransform: 'uppercase', letterSpacing: '0.5px',
+                                  }}>#{v.rank}</span>
+                                </div>
+                                <Avatar initials={v.avatar} color={v.color} size={avatarSz} />
+                                <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{v.name}</span>
+                                <div style={{
+                                  width: isFirst ? 96 : 80, height: blockH,
+                                  background: isFirst ? C.purple : C.blush,
+                                  borderRadius: '4px 4px 0 0',
+                                  display: 'flex', flexDirection: 'column',
+                                  alignItems: 'center', justifyContent: 'center', gap: 2,
+                                  border: `1px solid ${isFirst ? C.purpleMid : C.border}`,
+                                  borderBottom: 'none',
+                                }}>
+                                  <span style={{
+                                    fontSize: isFirst ? 18 : 15, fontWeight: 800,
+                                    color: isFirst ? 'white' : C.text,
+                                  }}>{v.total_points.toLocaleString()}</span>
+                                  <span style={{
+                                    fontSize: 9, fontWeight: 600,
+                                    color: isFirst ? 'rgba(255,255,255,0.75)' : C.textMuted,
+                                    textTransform: 'uppercase', letterSpacing: '0.5px',
+                                  }}>pts</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Full list */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {leaders.map((v, i) => (
+                        <div key={v.rank} style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '9px 10px', borderRadius: 4,
+                          background: i % 2 === 0 ? C.blushLight : 'transparent',
                         }}>
                           <span style={{
-                            fontSize: isFirst ? 18 : 15, fontWeight: 800,
-                            color: isFirst ? 'white' : C.text,
-                          }}>{v.points.toLocaleString()}</span>
+                            width: 22, fontSize: 12, fontWeight: 700, textAlign: 'right',
+                            color: v.rank <= 3 ? C.purple : C.textMuted, flexShrink: 0,
+                          }}>#{v.rank}</span>
+                          <Avatar initials={v.avatar} color={v.color} size={30} />
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{v.name}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.purple }}>{v.total_points.toLocaleString()} XP</span>
                           <span style={{
-                            fontSize: 9, fontWeight: 600,
-                            color: isFirst ? 'rgba(255,255,255,0.75)' : C.textMuted,
-                            textTransform: 'uppercase', letterSpacing: '0.5px',
-                          }}>pts</span>
+                            fontSize: 10, fontWeight: 600, color: C.textMuted,
+                            background: C.purpleLight, padding: '2px 8px', borderRadius: 3,
+                            letterSpacing: '0.3px',
+                          }}>Rank {v.rank}</span>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Full list */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {ALL.map((v, i) => (
-                    <div key={v.rank} style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '9px 10px', borderRadius: 4,
-                      background: i % 2 === 0 ? C.blushLight : 'transparent',
-                    }}>
-                      <span style={{
-                        width: 22, fontSize: 12, fontWeight: 700, textAlign: 'right',
-                        color: v.rank <= 3 ? C.purple : C.textMuted, flexShrink: 0,
-                      }}>#{v.rank}</span>
-                      <Avatar initials={v.avatar} color={v.color} size={30} />
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{v.name}</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: C.purple }}>{v.xp.toLocaleString()} XP</span>
-                      <span style={{
-                        fontSize: 10, fontWeight: 600, color: C.textMuted,
-                        background: C.purpleLight, padding: '2px 8px', borderRadius: 3,
-                        letterSpacing: '0.3px',
-                      }}>Rank {v.rank}</span>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </Card>
 
             </div>
@@ -346,40 +379,47 @@ export default function LeaderboardPage() {
 
               {/* Volunteer Spotlight */}
               <Card accentColor={C.teal} title="Volunteer Spotlight">
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  marginBottom: 16, padding: '12px 14px',
-                  background: C.blushLight, border: `1px solid ${C.border}`,
-                  borderRadius: 4,
-                }}>
-                  <Avatar initials={SPOTLIGHT.avatar} color={SPOTLIGHT.color} size={48} />
-                  <div>
-                    <p style={{ fontSize: 16, fontWeight: 800, margin: 0, color: C.text }}>{SPOTLIGHT.name}</p>
-                    <p style={{ fontSize: 12, color: C.textSec, margin: '2px 0 0' }}>{SPOTLIGHT.role}</p>
-                    <p style={{ fontSize: 11, color: C.textMuted, margin: '2px 0 0' }}>
-                      {SPOTLIGHT.location}
-                    </p>
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                  {[
-                    { label: 'Events',   value: SPOTLIGHT.events,   accent: C.purple },
-                    { label: 'Hours',    value: SPOTLIGHT.hours,    accent: C.teal   },
-                    { label: 'Referred', value: SPOTLIGHT.referred, accent: C.coral  },
-                  ].map(s => (
-                    <div key={s.label} style={{
-                      padding: '12px 8px', textAlign: 'center',
+                {leaders.length > 0 ? (
+                  <>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      marginBottom: 16, padding: '12px 14px',
                       background: C.blushLight, border: `1px solid ${C.border}`,
-                      borderRadius: 4, borderTop: `3px solid ${s.accent}`,
+                      borderRadius: 4,
                     }}>
-                      <p style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: 0 }}>{s.value}</p>
-                      <p style={{ fontSize: 10, color: C.textMuted, margin: '3px 0 0',
-                        fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                        {s.label}
-                      </p>
+                      <Avatar initials={leaders[0].avatar} color={leaders[0].color} size={48} />
+                      <div>
+                        <p style={{ fontSize: 16, fontWeight: 800, margin: 0, color: C.text }}>{leaders[0].name}</p>
+                        <p style={{ fontSize: 12, color: C.textSec, margin: '2px 0 0' }}>Top Volunteer</p>
+                        <p style={{ fontSize: 11, color: C.textMuted, margin: '2px 0 0' }}>
+                          #{leaders[0].rank} on the leaderboard
+                        </p>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      {[
+                        { label: 'Points',  value: leaders[0].total_points.toLocaleString(), accent: C.purple },
+                        { label: 'Rank',    value: `#${leaders[0].rank}`,                    accent: C.teal   },
+                      ].map(s => (
+                        <div key={s.label} style={{
+                          padding: '12px 8px', textAlign: 'center',
+                          background: C.blushLight, border: `1px solid ${C.border}`,
+                          borderRadius: 4, borderTop: `3px solid ${s.accent}`,
+                        }}>
+                          <p style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: 0 }}>{s.value}</p>
+                          <p style={{ fontSize: 10, color: C.textMuted, margin: '3px 0 0',
+                            fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                            {s.label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p style={{ color: C.textMuted, fontSize: 13, textAlign: 'center', padding: '16px 0' }}>
+                    No data yet.
+                  </p>
+                )}
               </Card>
 
               {/* Badges Earned */}
