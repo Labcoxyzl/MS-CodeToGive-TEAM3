@@ -147,7 +147,7 @@ export default function AdminCharts({ part = "all" }: { part?: "top" | "bottom" 
               </Pie>
               <Tooltip
                 contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
-                formatter={(v: number, name: string) => [`${v} (${total ? Math.round(v / total * 100) : 0}%)`, name]}
+                formatter={(v, name) => [`${v} (${total ? Math.round(Number(v) / total * 100) : 0}%)`, name]}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -192,7 +192,7 @@ export default function AdminCharts({ part = "all" }: { part?: "top" | "bottom" 
             <YAxis type="category" dataKey="title" tick={{ fontSize: 11, fill: "#6b7280" }} tickLine={false} axisLine={false} width={140} />
             <Tooltip
               contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
-              formatter={(v: number, _: string, entry: any) =>
+              formatter={(v, _name, entry: any) =>
                 [`${v}% (${entry.payload.attended}/${entry.payload.signups} checked in)`, "Participation"]
               }
             />
