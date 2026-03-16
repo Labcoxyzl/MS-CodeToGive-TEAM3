@@ -103,7 +103,7 @@ export default function EventsPageClient() {
   );
 
   const handleClearFilters = useCallback(() => {
-    router.replace("/event");
+    router.replace("/events");
   }, [router]);
 
   const { events, loading, error, updateEventRegistration } = useEvents();
