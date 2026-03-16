@@ -156,28 +156,22 @@ export default function DashboardPage() {
           pointsEarned: points
         });
 
-        // 4. Upcoming Public Events (FastAPI)
-        const publicRes = await fetch(`${API_URL}/api/v1/events/`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        const publicEvents = await publicRes.json();
-        
-        const upcomingFormatted = [];
-        if (Array.isArray(publicEvents)) {
-           const upcoming = publicEvents.filter(ev => new Date(ev.start_time || ev.date || Date.now()) >= now && ev.status !== "cancelled");
-           upcomingFormatted.push(...upcoming.slice(0, 3).map(ev => {
-             const d = new Date(ev.start_time || ev.date || Date.now());
-             // Check if user is registered for this event
-             const isRegistered = Array.isArray(joinedEvents) && joinedEvents.some(je => je.id === ev.id);
-             return {
-                id: ev.id,
-                title: ev.title,
-                location: ev.location_name || "Unknown",
-                date: d.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }),
-                registered: isRegistered
-             };
-           }));
-        }
+        // 4. Upcoming registered events (derived from joinedEvents already fetched)
+        const upcomingFormatted = Array.isArray(joinedEvents)
+          ? joinedEvents
+              .filter(ev => new Date(ev.start_time || ev.date || Date.now()) >= now && ev.status !== "cancelled")
+              .slice(0, 5)
+              .map(ev => {
+                const d = new Date(ev.start_time || ev.date || Date.now());
+                return {
+                  id: ev.id,
+                  title: ev.title,
+                  location: ev.location_name || "Unknown",
+                  date: d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                  registered: true,
+                };
+              })
+          : [];
         setUpcomingEvents(upcomingFormatted);
 
 
@@ -285,7 +279,14 @@ export default function DashboardPage() {
 
               {/* Bottom Grid: Upcoming Events + Leaderboard */}
               <div className={styles.bottomGrid}>
-                <UpcomingEventsTable events={upcomingEvents} />
+                <UpcomingEventsTable
+                  events={upcomingEvents}
+                  onRegistrationChange={(eventId, registered) =>
+                    setUpcomingEvents((prev) =>
+                      prev.map((ev) => ev.id === eventId ? { ...ev, registered } : ev)
+                    )
+                  }
+                />
                 <LeaderboardPreview entries={MOCK_LEADERBOARD} />
               </div>
             </>
