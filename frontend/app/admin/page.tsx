@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
 import StatsCard from "@/app/components/ui/StatsCard";
+import AdminEventMap from "@/app/components/ui/AdminEventMap";
 import { apiFetch } from "@/app/lib/api";
 import SignupDetailsDrawer from "@/app/admin/SignupDetailsDrawer";
 import styles from "./admin.module.css";
@@ -136,10 +137,39 @@ export default function AdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<EventRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [signupsOpen, setSignupsOpen] = useState(true);
+  const [signupEventDropdownOpen, setSignupEventDropdownOpen] = useState(false);
+  const [signupStatusDropdownOpen, setSignupStatusDropdownOpen] = useState(false);
+  const signupEventDropdownRef = useRef<HTMLDivElement>(null);
+  const signupStatusDropdownRef = useRef<HTMLDivElement>(null);
+  const [eventStatusDropdownOpen, setEventStatusDropdownOpen] = useState(false);
+  const eventStatusDropdownRef = useRef<HTMLDivElement>(null);
+  const [openRoleDropdownId, setOpenRoleDropdownId] = useState<string | null>(null);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  // Close all custom dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (signupEventDropdownRef.current && !signupEventDropdownRef.current.contains(e.target as Node)) {
+        setSignupEventDropdownOpen(false);
+      }
+      if (signupStatusDropdownRef.current && !signupStatusDropdownRef.current.contains(e.target as Node)) {
+        setSignupStatusDropdownOpen(false);
+      }
+      if (eventStatusDropdownRef.current && !eventStatusDropdownRef.current.contains(e.target as Node)) {
+        setEventStatusDropdownOpen(false);
+      }
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
+        setOpenRoleDropdownId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Fetch analytics
@@ -227,16 +257,18 @@ export default function AdminPage() {
     }
     setIsAuthorized(true);
 
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const meta = payload?.user_metadata;
-      if (meta?.name) setUserName(meta.name);
-      else setUserName("Admin");
-    } catch {
-      setUserName("Admin");
-    }
-
     async function init() {
+      // Fetch name from authoritative source
+      try {
+        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          if (me.name) setUserName(me.name);
+          else setUserName("Admin");
+        }
+      } catch { setUserName("Admin"); }
       await fetchAnalytics();
       await Promise.all([fetchUsers(0), fetchEvents(0), fetchSignups(0), fetchEventOptions()]);
       setLoading(false);
@@ -459,12 +491,12 @@ export default function AdminPage() {
               <Image src="/lemontree_text_logo.svg" alt="Lemontree" width={112} height={24} priority />
             </span>
           </Link>
-          <div className={styles.topBarUser}>
+          <Link href="/profile" className={styles.topBarUser} style={{ textDecoration: "none", color: "inherit" }}>
             <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)" }}>
               {getInitials(userName)}
             </div>
             <span>{userName}</span>
-          </div>
+          </Link>
         </div>
 
         {/* Content */}
@@ -560,13 +592,37 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  {/* Signups Management */}
+                  {/* Event Overview Map */}
                   <div className={styles.tablePanel} style={{ marginTop: 24 }}>
                     <div className={styles.tablePanelHeader}>
-                      <h3 className={styles.tablePanelTitle}>All Signups</h3>
+                      <h3 className={styles.tablePanelTitle}>Historical Event Activity by Location</h3>
+                    </div>
+                    <div style={{ padding: "16px 20px" }}>
+                      <div style={{ borderRadius: 8, overflow: "hidden" }}>
+                        <AdminEventMap height={440} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Signups Management */}
+                  <div className={styles.tablePanel} style={{ marginTop: 24 }}>
+                    <div
+                      className={styles.tablePanelHeader}
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                      onClick={() => setSignupsOpen((o) => !o)}
+                    >
+                      <h3 className={styles.tablePanelTitle} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <svg
+                          width="14" height="14" viewBox="0 0 20 20" fill="currentColor"
+                          style={{ transition: "transform 0.2s", transform: signupsOpen ? "rotate(90deg)" : "rotate(0deg)", flexShrink: 0 }}
+                        >
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                        All Signups
+                      </h3>
                       <button
                         className={styles.exportBtn}
-                        onClick={handleExportCsv}
+                        onClick={(e) => { e.stopPropagation(); handleExportCsv(); }}
                         disabled={exporting}
                       >
                         <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
@@ -576,152 +632,185 @@ export default function AdminPage() {
                       </button>
                     </div>
 
-                    <div className={styles.filtersBar}>
-                      <input
-                        type="text"
-                        className={styles.searchInput}
-                        placeholder="Search name, email, or phone..."
-                        value={signupSearch}
-                        onChange={(e) => handleSignupSearchChange(e.target.value)}
-                      />
-                      <select
-                        className={styles.statusFilter}
-                        value={signupEventFilter}
-                        onChange={(e) => {
-                          setSignupEventFilter(e.target.value);
-                          applySignupFilters(e.target.value);
-                        }}
-                      >
-                        <option value="">All Events</option>
-                        {eventOptions.map((ev) => (
-                          <option key={ev.id} value={ev.id}>
-                            {ev.title}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        className={styles.statusFilter}
-                        value={signupStatusFilter}
-                        onChange={(e) => {
-                          setSignupStatusFilter(e.target.value);
-                          applySignupFilters(undefined, e.target.value);
-                        }}
-                      >
-                        <option value="">All Statuses</option>
-                        <option value="registered">Registered</option>
-                        <option value="attended">Attended</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                      <input
-                        type="date"
-                        className={styles.dateInput}
-                        value={signupDateFrom}
-                        onChange={(e) => {
-                          setSignupDateFrom(e.target.value);
-                          applySignupFilters(undefined, undefined, e.target.value);
-                        }}
-                        title="From date"
-                      />
-                      <input
-                        type="date"
-                        className={styles.dateInput}
-                        value={signupDateTo}
-                        onChange={(e) => {
-                          setSignupDateTo(e.target.value);
-                          applySignupFilters(undefined, undefined, undefined, e.target.value);
-                        }}
-                        title="To date"
-                      />
-                    </div>
-
-                    <div className={styles.tableScroll}>
-                      {signups.length === 0 ? (
-                        <div className={styles.emptyState}>No signups found.</div>
-                      ) : (
-                        <table className="lt-table">
-                          <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Email</th>
-                              <th>Phone</th>
-                              <th>Event</th>
-                              <th>Date</th>
-                              <th>Status</th>
-                              <th></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {signups.map((signup) => (
-                              <tr key={signup.id}>
-                                <td>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                    <div className="lt-avatar lt-avatar--sm">
-                                      {getInitials(signup.name || "")}
-                                    </div>
-                                    <div>
-                                      <span style={{ fontWeight: 600 }}>{signup.name || "—"}</span>
-                                      {signup.is_guest && (
-                                        <span className={styles.guestBadge}>Guest</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </td>
-                                <td style={{ color: "var(--lt-text-secondary)" }}>
-                                  {signup.email || "—"}
-                                </td>
-                                <td style={{ color: "var(--lt-text-secondary)" }}>
-                                  {signup.phone || "—"}
-                                </td>
-                                <td style={{ fontWeight: 500 }}>
-                                  {signup.event_title || "—"}
-                                </td>
-                                <td style={{ color: "var(--lt-text-secondary)" }}>
-                                  {formatDate(signup.signed_up_at)}
-                                </td>
-                                <td>
-                                  <span className={styles.signupStatusBadge} data-status={signup.status}>
-                                    {signup.status}
-                                  </span>
-                                </td>
-                                <td>
-                                  <button
-                                    className={styles.viewBtn}
-                                    onClick={() => setSelectedSignup(signup)}
+                    {signupsOpen && (
+                      <>
+                        <div className={styles.filtersBar}>
+                          <input
+                            type="text"
+                            className={styles.searchInput}
+                            placeholder="Search name, email, or phone..."
+                            value={signupSearch}
+                            onChange={(e) => handleSignupSearchChange(e.target.value)}
+                          />
+                          {/* Event filter custom dropdown */}
+                          <div ref={signupEventDropdownRef} style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              className="lt-select"
+                              onClick={() => { setSignupEventDropdownOpen(o => !o); setSignupStatusDropdownOpen(false); }}
+                              style={{ textAlign: "left", minWidth: 160, color: signupEventFilter ? "inherit" : "var(--lt-text-muted)" }}
+                            >
+                              {signupEventFilter ? (eventOptions.find(e => e.id === signupEventFilter)?.title ?? "All Events") : "All Events"}
+                            </button>
+                            {signupEventDropdownOpen && (
+                              <div className="lt-select-dropdown" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", maxHeight: 200, overflowY: "auto", marginTop: 4 }}>
+                                {[{ id: "", title: "All Events" }, ...eventOptions].map((ev) => (
+                                  <div
+                                    key={ev.id}
+                                    className="lt-select-option"
+                                    onClick={() => { setSignupEventFilter(ev.id); applySignupFilters(ev.id); setSignupEventDropdownOpen(false); }}
+                                    style={{ padding: "10px 14px", fontSize: 14, cursor: "pointer", background: signupEventFilter === ev.id ? "var(--lt-teal-light)" : "transparent", color: signupEventFilter === ev.id ? "var(--lt-teal)" : "var(--lt-text-primary)", fontWeight: signupEventFilter === ev.id ? 600 : "normal" }}
+                                    onMouseEnter={(e) => { if (signupEventFilter !== ev.id) e.currentTarget.style.background = "var(--lt-card-bg-muted)"; }}
+                                    onMouseLeave={(e) => { if (signupEventFilter !== ev.id) e.currentTarget.style.background = "transparent"; }}
                                   >
-                                    View
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-                    {signupsTotal > PAGE_SIZE && (
-                      <div className={styles.pagination}>
-                        <span className={styles.paginationInfo}>
-                          Showing {signupsPage * PAGE_SIZE + 1}–
-                          {Math.min((signupsPage + 1) * PAGE_SIZE, signupsTotal)} of {signupsTotal}
-                        </span>
-                        <div className={styles.paginationBtns}>
-                          <button
-                            className={styles.pageBtn}
-                            disabled={signupsPage === 0}
-                            onClick={() => handleSignupsPageChange(signupsPage - 1)}
-                          >
-                            Previous
-                          </button>
-                          <button
-                            className={styles.pageBtn}
-                            disabled={signupsPage >= signupsTotalPages - 1}
-                            onClick={() => handleSignupsPageChange(signupsPage + 1)}
-                          >
-                            Next
-                          </button>
+                                    {ev.title}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Status filter custom dropdown */}
+                          <div ref={signupStatusDropdownRef} style={{ position: "relative" }}>
+                            <button
+                              type="button"
+                              className="lt-select"
+                              onClick={() => { setSignupStatusDropdownOpen(o => !o); setSignupEventDropdownOpen(false); }}
+                              style={{ textAlign: "left", minWidth: 140, color: signupStatusFilter ? "inherit" : "var(--lt-text-muted)" }}
+                            >
+                              {signupStatusFilter ? signupStatusFilter.charAt(0).toUpperCase() + signupStatusFilter.slice(1) : "All Statuses"}
+                            </button>
+                            {signupStatusDropdownOpen && (
+                              <div className="lt-select-dropdown" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", maxHeight: 200, overflowY: "auto", marginTop: 4 }}>
+                                {[{ value: "", label: "All Statuses" }, { value: "registered", label: "Registered" }, { value: "attended", label: "Attended" }, { value: "cancelled", label: "Cancelled" }].map((opt) => (
+                                  <div
+                                    key={opt.value}
+                                    className="lt-select-option"
+                                    onClick={() => { setSignupStatusFilter(opt.value); applySignupFilters(undefined, opt.value); setSignupStatusDropdownOpen(false); }}
+                                    style={{ padding: "10px 14px", fontSize: 14, cursor: "pointer", background: signupStatusFilter === opt.value ? "var(--lt-teal-light)" : "transparent", color: signupStatusFilter === opt.value ? "var(--lt-teal)" : "var(--lt-text-primary)", fontWeight: signupStatusFilter === opt.value ? 600 : "normal" }}
+                                    onMouseEnter={(e) => { if (signupStatusFilter !== opt.value) e.currentTarget.style.background = "var(--lt-card-bg-muted)"; }}
+                                    onMouseLeave={(e) => { if (signupStatusFilter !== opt.value) e.currentTarget.style.background = "transparent"; }}
+                                  >
+                                    {opt.label}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            type="date"
+                            className={styles.dateInput}
+                            value={signupDateFrom}
+                            onChange={(e) => {
+                              setSignupDateFrom(e.target.value);
+                              applySignupFilters(undefined, undefined, e.target.value);
+                            }}
+                            title="From date"
+                          />
+                          <input
+                            type="date"
+                            className={styles.dateInput}
+                            value={signupDateTo}
+                            onChange={(e) => {
+                              setSignupDateTo(e.target.value);
+                              applySignupFilters(undefined, undefined, undefined, e.target.value);
+                            }}
+                            title="To date"
+                          />
                         </div>
-                      </div>
+
+                        <div className={styles.tableScroll}>
+                          {signups.length === 0 ? (
+                            <div className={styles.emptyState}>No signups found.</div>
+                          ) : (
+                            <table className="lt-table">
+                              <thead>
+                                <tr>
+                                  <th>Name</th>
+                                  <th>Email</th>
+                                  <th>Phone</th>
+                                  <th>Event</th>
+                                  <th>Date</th>
+                                  <th>Status</th>
+                                  <th></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {signups.map((signup) => (
+                                  <tr key={signup.id}>
+                                    <td>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                        <div className="lt-avatar lt-avatar--sm">
+                                          {getInitials(signup.name || "")}
+                                        </div>
+                                        <div>
+                                          <span style={{ fontWeight: 600 }}>{signup.name || "—"}</span>
+                                          {signup.is_guest && (
+                                            <span className={styles.guestBadge}>Guest</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td style={{ color: "var(--lt-text-secondary)" }}>
+                                      {signup.email || "—"}
+                                    </td>
+                                    <td style={{ color: "var(--lt-text-secondary)" }}>
+                                      {signup.phone || "—"}
+                                    </td>
+                                    <td style={{ fontWeight: 500 }}>
+                                      {signup.event_title || "—"}
+                                    </td>
+                                    <td style={{ color: "var(--lt-text-secondary)" }}>
+                                      {formatDate(signup.signed_up_at)}
+                                    </td>
+                                    <td>
+                                      <span className={styles.signupStatusBadge} data-status={signup.status}>
+                                        {signup.status}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <button
+                                        className={styles.viewBtn}
+                                        onClick={() => setSelectedSignup(signup)}
+                                      >
+                                        View
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+
+                        {signupsTotal > PAGE_SIZE && (
+                          <div className={styles.pagination}>
+                            <span className={styles.paginationInfo}>
+                              Showing {signupsPage * PAGE_SIZE + 1}–
+                              {Math.min((signupsPage + 1) * PAGE_SIZE, signupsTotal)} of {signupsTotal}
+                            </span>
+                            <div className={styles.paginationBtns}>
+                              <button
+                                className={styles.pageBtn}
+                                disabled={signupsPage === 0}
+                                onClick={() => handleSignupsPageChange(signupsPage - 1)}
+                              >
+                                Previous
+                              </button>
+                              <button
+                                className={styles.pageBtn}
+                                disabled={signupsPage >= signupsTotalPages - 1}
+                                onClick={() => handleSignupsPageChange(signupsPage + 1)}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
+
                 </div>
               )}
 
@@ -763,17 +852,33 @@ export default function AdminPage() {
                               </td>
                               <td style={{ color: "var(--lt-text-secondary)" }}>{user.email}</td>
                               <td>
-                                <select
-                                  className={styles.roleSelect}
-                                  value={user.role}
-                                  onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
-                                  disabled={updatingRole === user.id}
-                                >
-                                  <option value="volunteer">Volunteer</option>
-                                  <option value="leader">Leader</option>
-                                  <option value="promoter">Promoter</option>
-                                  <option value="admin">Admin</option>
-                                </select>
+                                <div ref={openRoleDropdownId === user.id ? roleDropdownRef : undefined} style={{ position: "relative" }}>
+                                  <button
+                                    type="button"
+                                    className="lt-select"
+                                    onClick={() => setOpenRoleDropdownId((id) => id === user.id ? null : user.id)}
+                                    disabled={updatingRole === user.id}
+                                    style={{ textAlign: "left", minWidth: 120, opacity: updatingRole === user.id ? 0.6 : 1 }}
+                                  >
+                                    {updatingRole === user.id ? "Saving…" : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                                  </button>
+                                  {openRoleDropdownId === user.id && (
+                                    <div className="lt-select-dropdown" style={{ position: "absolute", top: "100%", left: 0, zIndex: 20, background: "#fff", border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", minWidth: 140, marginTop: 4 }}>
+                                      {(["volunteer", "leader", "promoter", "admin"] as Role[]).map((role) => (
+                                        <div
+                                          key={role}
+                                          className="lt-select-option"
+                                          onClick={() => { handleRoleChange(user.id, role); setOpenRoleDropdownId(null); }}
+                                          style={{ padding: "10px 14px", fontSize: 14, cursor: "pointer", background: user.role === role ? "var(--lt-teal-light)" : "transparent", color: user.role === role ? "var(--lt-teal)" : "var(--lt-text-primary)", fontWeight: user.role === role ? 600 : "normal" }}
+                                          onMouseEnter={(e) => { if (user.role !== role) e.currentTarget.style.background = "var(--lt-card-bg-muted)"; }}
+                                          onMouseLeave={(e) => { if (user.role !== role) e.currentTarget.style.background = "transparent"; }}
+                                        >
+                                          {role.charAt(0).toUpperCase() + role.slice(1)}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td style={{ color: "var(--lt-text-secondary)" }}>
                                 {formatDate(user.created_at)}
@@ -821,17 +926,32 @@ export default function AdminPage() {
                 <div className={styles.tablePanel}>
                   <div className={styles.tablePanelHeader}>
                     <h3 className={styles.tablePanelTitle}>All Events</h3>
-                    <select
-                      className={styles.statusFilter}
-                      value={statusFilter}
-                      onChange={(e) => handleStatusFilterChange(e.target.value)}
-                    >
-                      <option value="">All Statuses</option>
-                      <option value="upcoming">Upcoming</option>
-                      <option value="active">Active</option>
-                      <option value="completed">Completed</option>
-                      <option value="cancelled">Cancelled</option>
-                    </select>
+                    <div ref={eventStatusDropdownRef} style={{ position: "relative" }}>
+                      <button
+                        type="button"
+                        className="lt-select"
+                        onClick={() => setEventStatusDropdownOpen((o) => !o)}
+                        style={{ textAlign: "left", minWidth: 140, color: statusFilter ? "inherit" : "var(--lt-text-muted)" }}
+                      >
+                        {statusFilter ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : "All Statuses"}
+                      </button>
+                      {eventStatusDropdownOpen && (
+                        <div className="lt-select-dropdown" style={{ position: "absolute", top: "100%", right: 0, zIndex: 20, background: "#fff", border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", minWidth: 160, marginTop: 4 }}>
+                          {[{ value: "", label: "All Statuses" }, { value: "upcoming", label: "Upcoming" }, { value: "active", label: "Active" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }].map((opt) => (
+                            <div
+                              key={opt.value}
+                              className="lt-select-option"
+                              onClick={() => { handleStatusFilterChange(opt.value); setEventStatusDropdownOpen(false); }}
+                              style={{ padding: "10px 14px", fontSize: 14, cursor: "pointer", background: statusFilter === opt.value ? "var(--lt-teal-light)" : "transparent", color: statusFilter === opt.value ? "var(--lt-teal)" : "var(--lt-text-primary)", fontWeight: statusFilter === opt.value ? 600 : "normal" }}
+                              onMouseEnter={(e) => { if (statusFilter !== opt.value) e.currentTarget.style.background = "var(--lt-card-bg-muted)"; }}
+                              onMouseLeave={(e) => { if (statusFilter !== opt.value) e.currentTarget.style.background = "transparent"; }}
+                            >
+                              {opt.label}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className={styles.tableScroll}>
                     {events.length === 0 ? (
