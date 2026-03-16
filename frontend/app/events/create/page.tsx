@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Check, AlertCircle, X } from 'lucide-react';
+import { ChevronDown, Check, AlertCircle, X, ChevronLeft, Info, Search, MapPin } from 'lucide-react';
 import MapGL, { Marker, MapRef } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import Sidebar from '@/app/components/ui/Sidebar';
+import styles from '@/app/dashboard/dashboard.module.css';
 
 // ─── Brand tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -94,7 +96,7 @@ function Dropdown({ value, onChange, placeholder, options }: {
       </button>
       {open && (
         <div style={{position:'absolute',zIndex:50,width:'100%',marginTop:3,background:'white',
-          border:`2px solid ${C.inputBorder}`,borderRadius:'5px',
+          border:`2px solid ${C.inputBorder}`,borderRadius:'55px',
           boxShadow:'0 8px 24px rgba(107,70,193,0.15)',overflow:'hidden'}}>
           <div style={{padding:8,borderBottom:`1px solid ${C.border}`}}>
             <input ref={inp} type="text" value={search} onChange={e=>setSearch(e.target.value)}
@@ -139,7 +141,7 @@ function Field({ label, children, mb=14 }: { label:string; children:React.ReactN
 function HandsBanner() {
   return (
     <div style={{
-      width:'100vw', marginLeft:'calc(-50vw + 50%)',
+      width:'100%',
       marginTop:40, background:'#fef6df',
       padding:'20px 0 0',
     }}>
@@ -262,7 +264,8 @@ export default function CreateEventPage() {
   const [err, setErr]                 = useState<string|null>(null);
   const [ok, setOk]                   = useState(false);
   const [geocodedCoords, setGeocodedCoords] = useState<{lat:number;lng:number}|null>(null);
-  const [userState, setUserState]     = useState({name:'', initials:''});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userState, setUserState] = useState({ name: '', initials: '', role: '' });
   const [userLoading, setUserLoading] = useState(true);
 
   // Location autocomplete
@@ -348,15 +351,20 @@ export default function CreateEventPage() {
   // Load current user for header
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    if (!token) { setUserLoading(false); return; }
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     (async () => {
       try {
         let name = 'Volunteer';
+        // Decode JWT for basic info (no network call needed for initials)
         const payload = JSON.parse(atob(token.split('.')[1]));
         const meta = payload?.user_metadata;
         if (typeof meta?.name === 'string') {
           name = meta.name;
         } else {
+          // Fallback to fetching name from auth/v1/user
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
           const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
           if (supabaseUrl) {
@@ -366,20 +374,32 @@ export default function CreateEventPage() {
             if (r.ok) {
               const d = await r.json();
               if (d?.user_metadata?.name) name = d.user_metadata.name;
+            } else if (r.status === 401) {
+              // Token expired
+              localStorage.removeItem('access_token');
+              router.push('/login');
+              return;
             }
           }
         }
-        setUserState({name, initials: getInitials(name)});
-      } catch { /* ignore */ }
-      finally { setUserLoading(false); }
+        setUserState({name, initials: getInitials(name), role: ''});
+      } catch (e) {
+        console.error("Auth check failed:", e);
+      } finally {
+        setUserLoading(false);
+      }
     })();
-  }, []);
+  }, [router]);
 
   async function submit() {
     if (!form.title.trim()) { setErr('Please add an event title.'); return; }
     setBusy(true); setErr(null);
     try {
-      // Geocode address via Nominatim
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      if (!token) { router.push('/login'); return; }
+
+
+      // 2. Geocode address via Nominatim
       let latitude: number | null = null;
       let longitude: number | null = null;
       if (form.locationAddress.trim()) {
@@ -394,13 +414,12 @@ export default function CreateEventPage() {
         }
       }
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-
+      // 3. Create Event
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/events/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           title:           form.title,
@@ -439,55 +458,70 @@ export default function CreateEventPage() {
     } catch { /* ignore */ }
   }
 
+  if (userLoading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#fef6df', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="lt-spinner" style={{ width: 48, height: 48, borderTopColor: '#784cc5' }} />
+      </div>
+    );
+  }
+
   return (
-    <div style={{minHeight:'100vh', background:'#fef6df', fontFamily:'var(--font-dm-sans)'}}>
+    <div className={styles.dashboardShell}>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Date picker theming */}
-      <style>{`
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          filter: invert(30%) sepia(80%) saturate(500%) hue-rotate(240deg) brightness(80%);
-          cursor: pointer;
-          opacity: 0.7;
-        }
-        input[type="date"]::-webkit-datetime-edit {
-          color: #2D2A26;
-        }
-      `}</style>
+      <div className={styles.dashboardMain} style={{ background: '#fef6df', minHeight: '100vh' }}>
+        {/* Date picker theming */}
+        <style>{`
+          input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(30%) sepia(80%) saturate(500%) hue-rotate(240deg) brightness(80%);
+            cursor: pointer;
+            opacity: 0.7;
+          }
+          input[type="date"]::-webkit-datetime-edit {
+            color: #2D2A26;
+          }
+        `}</style>
 
-      {/* ── Yellow header bar with real logo ── */}
-      <header style={{background:'#fecc0e', height:60, display:'flex', alignItems:'center',
-        justifyContent:'space-between', padding:'0 24px', flexShrink:0}}>
-        <Link href="/dashboard" style={{display:'flex', alignItems:'center', gap:10, textDecoration:'none'}}>
-          <Image src="/logo.svg" alt="Lemontree" width={42} height={42} priority />
-          <Image src="/lemontree_text_logo.svg" alt="Lemontree" width={112} height={24} priority style={{filter:'brightness(0)'}} />
-        </Link>
-        <button type="button" onClick={() => router.push('/profile')} style={{
-          display:'flex', alignItems:'center', gap:8,
-          background:'rgba(45,42,38,0.12)', border:'none',
-          padding:'6px 14px', borderRadius:999, cursor:'pointer',
-          fontFamily:'var(--font-dm-sans)',
-        }}>
-          {userLoading ? (
-            <span className="lt-spinner" style={{width:20,height:20,borderTopColor:'rgba(45,42,38,0.5)'}} />
-          ) : (
-            <>
-              <div className="lt-avatar" style={{
-                width:28, height:28, borderRadius:'50%',
-                background:C.purple, color:'white',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:11, fontWeight:700, border:'2px solid rgba(0,0,0,0.1)',
-                flexShrink:0,
-              }}>{userState.initials || 'V'}</div>
-              <span style={{fontSize:13, fontWeight:600, color:'#2D2A26'}}>
-                {userState.name || 'Volunteer'}
-              </span>
-            </>
-          )}
-        </button>
-      </header>
+        {/* ── Top Bar ──────────────────────────────────────── */}
+        <div className={styles.topBar}>
+          <Link href="/" className="lt-header__logo">
+            <span>
+              <Image
+                src="/logo.svg"
+                alt="Lemontree Icon"
+                width={32}
+                height={32}
+                priority
+              />
+              <Image
+                src="/lemontree_text_logo.svg"
+                alt="Lemontree"
+                width={112}
+                height={24}
+                priority
+              />
+            </span>
+          </Link>
+          <button 
+            onClick={() => router.push('/profile')}
+            className={styles.topBarUser}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            {userLoading ? (
+              <div className="lt-spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--lt-color-brand-primary)' }} />
+            ) : (
+              <>
+                <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)" }}>{userState.initials || 'V'}</div>
+                <span>{userState.name || 'Volunteer'}</span>
+              </>
+            )}
+          </button>
+        </div>
 
-      {/* ── Main content ── */}
-      <div style={{maxWidth:1160,margin:'0 auto',padding:'22px 32px 0'}}>
+        {/* ── Main content ── */}
+        <div className={styles.dashboardContent}>
+
 
         {/* Banners */}
         {ok && (
@@ -677,10 +711,10 @@ export default function CreateEventPage() {
           </button>
         </div>
 
-        {/* ── Hands banner ── */}
-        <HandsBanner />
+        </div> {/* End dashboardContent */}
 
-      </div>
+        <HandsBanner />
+      </div> {/* End dashboardMain */}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Sidebar from '@/app/components/ui/Sidebar';
+import dashStyles from '@/app/dashboard/dashboard.module.css';
 
 const C = {
   yellow:      '#fecc0e',
@@ -144,228 +146,290 @@ function Card({ accentColor, title, children, noPad }: {
 
 export default function LeaderboardPage() {
   const [period, setPeriod] = useState('All time');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userState, setUserState] = useState({ name: '', initials: '' });
+  const [userLoading, setUserLoading] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      setUserLoading(true);
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const userId = payload.sub;
+        
+        const meta = payload?.user_metadata as Record<string, any> | undefined;
+        if (meta?.name) {
+          const name = meta.name;
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
+          setUserState({ name, initials });
+          setUserLoading(false);
+        } else {
+          const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          if (anonKey && supabaseUrl) {
+            fetch(`${supabaseUrl}/rest/v1/users?id=eq.${userId}&select=name`, {
+              headers: {
+                'apikey': anonKey,
+                'Authorization': `Bearer ${token}`
+              }
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data?.[0]?.name) {
+                const name = data[0].name;
+                const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
+                setUserState({ name, initials });
+              }
+            })
+            .finally(() => setUserLoading(false));
+          } else {
+            setUserLoading(false);
+          }
+        }
+      } catch (e) {
+        console.error("Error decoding token:", e);
+        setUserLoading(false);
+      }
+    }
+  }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'DM Sans', sans-serif", color: C.text }}>
+    <div className={dashStyles.dashboardShell}>
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Header */}
-      <header style={{
-        background: C.yellow, height: 60,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 32px', flexShrink: 0,
-      }}>
-        <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Image src="/logo.svg" alt="Lemontree" width={42} height={42} priority />
-          <Image src="/lemontree_text_logo.svg" alt="Lemontree" width={112} height={24} priority style={{ filter: 'brightness(0)' }} />
-        </Link>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          background: 'rgba(45,42,38,0.12)', padding: '5px 14px',
-          borderRadius: 999, fontSize: 11, fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.8px', color: C.text,
-        }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.text, opacity: 0.5 }} />
-          User
-        </div>
-      </header>
+      <div className={dashStyles.dashboardMain} style={{ background: C.bg, minHeight: '100vh' }}>
+        {/* Header */}
+        <header className={dashStyles.topBar}>
+          <Link href="/" className="lt-header__logo">
+            <span>
+              <Image
+                src="/logo.svg"
+                alt="Lemontree Icon"
+                width={32}
+                height={32}
+                priority
+              />
+              <Image
+                src="/lemontree_text_logo.svg"
+                alt="Lemontree"
+                width={112}
+                height={24}
+                priority
+              />
+            </span>
+          </Link>
+          <Link href="/profile" className={dashStyles.topBarUser} style={{ textDecoration: "none", color: "inherit" }}>
+            {userLoading ? (
+              <div className="lt-spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--lt-color-brand-primary)' }} />
+            ) : (
+              <>
+                <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)" }}>
+                  {userState.initials || 'V'}
+                </div>
+                <span className="hidden sm:inline" style={{ fontSize: 14 }}>{userState.name || 'Volunteer'}</span>
+              </>
+            )}
+          </Link>
+        </header>
 
-      {/* Full-width page padding */}
-      <div style={{ padding: '28px 40px 60px', maxWidth: '100%' }}>
-
-        {/* Page title */}
-        <div style={{ marginBottom: 24, borderBottom: `1px solid ${C.border}`, paddingBottom: 16 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: C.text, letterSpacing: '-0.3px' }}>
-            Community Leaderboard
-          </h1>
-          <p style={{ fontSize: 13, color: C.textMuted, margin: '4px 0 0' }}>
-            Volunteers ranked by total impact points
-          </p>
-        </div>
-
-        {/* Two-col grid — full width */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
-
-          {/* ── LEFT ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-            <Card accentColor={C.purple} title="Rankings">
-              {/* Period tabs */}
-              <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-                {PERIODS.map(p => (
-                  <button key={p} type="button" onClick={() => setPeriod(p)} style={{
-                    padding: '5px 14px', fontSize: 12, fontWeight: 600, borderRadius: 4,
-                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                    background: period === p ? C.purple : 'transparent',
-                    color: period === p ? 'white' : C.textSec,
-                    border: `1.5px solid ${period === p ? C.purple : C.border}`,
-                  }}>{p}</button>
-                ))}
-              </div>
-
-              {/* Podium — #2 left, #1 centre (tallest), #3 right */}
-              <div style={{
-                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                gap: 8, marginBottom: 24, paddingBottom: 20,
-                borderBottom: `1px solid ${C.border}`,
-              }}>
-                {TOP3.map((v) => {
-                  const isFirst = v.rank === 1;
-                  const blockH = isFirst ? 88 : 64;
-                  const avatarSz = isFirst ? 56 : 44;
-                  return (
-                    <div key={v.rank} style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {isFirst && <TrophyIcon size={13} color={C.purple} />}
-                        <span style={{
-                          fontSize: 11, fontWeight: 700, color: isFirst ? C.purple : C.textMuted,
-                          textTransform: 'uppercase', letterSpacing: '0.5px',
-                        }}>#{v.rank}</span>
-                      </div>
-                      <Avatar initials={v.avatar} color={v.color} size={avatarSz} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{v.name}</span>
-                      <div style={{
-                        width: isFirst ? 96 : 80, height: blockH,
-                        background: isFirst ? C.purple : C.blush,
-                        borderRadius: '4px 4px 0 0',
-                        display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', gap: 2,
-                        border: `1px solid ${isFirst ? C.purpleMid : C.border}`,
-                        borderBottom: 'none',
-                      }}>
-                        <span style={{
-                          fontSize: isFirst ? 18 : 15, fontWeight: 800,
-                          color: isFirst ? 'white' : C.text,
-                        }}>{v.points.toLocaleString()}</span>
-                        <span style={{
-                          fontSize: 9, fontWeight: 600,
-                          color: isFirst ? 'rgba(255,255,255,0.75)' : C.textMuted,
-                          textTransform: 'uppercase', letterSpacing: '0.5px',
-                        }}>pts</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Full list */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {ALL.map((v, i) => (
-                  <div key={v.rank} style={{
-                    display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '9px 10px', borderRadius: 4,
-                    background: i % 2 === 0 ? C.blushLight : 'transparent',
-                  }}>
-                    <span style={{
-                      width: 22, fontSize: 12, fontWeight: 700, textAlign: 'right',
-                      color: v.rank <= 3 ? C.purple : C.textMuted, flexShrink: 0,
-                    }}>#{v.rank}</span>
-                    <Avatar initials={v.avatar} color={v.color} size={30} />
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{v.name}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.purple }}>{v.xp.toLocaleString()} XP</span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 600, color: C.textMuted,
-                      background: C.purpleLight, padding: '2px 8px', borderRadius: 3,
-                      letterSpacing: '0.3px',
-                    }}>Rank {v.rank}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
+        {/* content area */}
+        <div className={dashStyles.dashboardContent}>
+          {/* Page title */}
+          <div style={{ marginBottom: 24, borderBottom: `1px solid ${C.border}`, paddingBottom: 16 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, color: C.text, letterSpacing: '-0.3px' }}>
+              Community Leaderboard
+            </h1>
+            <p style={{ fontSize: 13, color: C.textMuted, margin: '4px 0 0' }}>
+              Volunteers ranked by total impact points
+            </p>
           </div>
 
-          {/* ── RIGHT ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Two-col grid — full width */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
 
-            {/* Volunteer Spotlight */}
-            <Card accentColor={C.teal} title="Volunteer Spotlight">
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                marginBottom: 16, padding: '12px 14px',
-                background: C.blushLight, border: `1px solid ${C.border}`,
-                borderRadius: 4,
-              }}>
-                <Avatar initials={SPOTLIGHT.avatar} color={SPOTLIGHT.color} size={48} />
-                <div>
-                  <p style={{ fontSize: 16, fontWeight: 800, margin: 0, color: C.text }}>{SPOTLIGHT.name}</p>
-                  <p style={{ fontSize: 12, color: C.textSec, margin: '2px 0 0' }}>{SPOTLIGHT.role}</p>
-                  <p style={{ fontSize: 11, color: C.textMuted, margin: '2px 0 0' }}>
-                    {SPOTLIGHT.location}
-                  </p>
+            {/* ── LEFT ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              <Card accentColor={C.purple} title="Rankings">
+                {/* Period tabs */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+                  {PERIODS.map(p => (
+                    <button key={p} type="button" onClick={() => setPeriod(p)} style={{
+                      padding: '5px 14px', fontSize: 12, fontWeight: 600, borderRadius: 4,
+                      cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                      background: period === p ? C.purple : 'transparent',
+                      color: period === p ? 'white' : C.textSec,
+                      border: `1.5px solid ${period === p ? C.purple : C.border}`,
+                    }}>{p}</button>
+                  ))}
                 </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {[
-                  { label: 'Events',   value: SPOTLIGHT.events,   accent: C.purple },
-                  { label: 'Hours',    value: SPOTLIGHT.hours,    accent: C.teal   },
-                  { label: 'Referred', value: SPOTLIGHT.referred, accent: C.coral  },
-                ].map(s => (
-                  <div key={s.label} style={{
-                    padding: '12px 8px', textAlign: 'center',
-                    background: C.blushLight, border: `1px solid ${C.border}`,
-                    borderRadius: 4, borderTop: `3px solid ${s.accent}`,
-                  }}>
-                    <p style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: 0 }}>{s.value}</p>
-                    <p style={{ fontSize: 10, color: C.textMuted, margin: '3px 0 0',
-                      fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                      {s.label}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Card>
 
-            {/* Badges Earned */}
-            <Card accentColor={C.coral} title="Badges Earned">
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '16px 8px',
-                justifyItems: 'center',
-              }}>
-                {BADGES.map(b => (
-                  <Badge key={b.label} color={b.color} earned={b.earned} label={b.label} />
-                ))}
-              </div>
-            </Card>
+                {/* Podium — #2 left, #1 centre (tallest), #3 right */}
+                <div style={{
+                  display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                  gap: 8, marginBottom: 24, paddingBottom: 20,
+                  borderBottom: `1px solid ${C.border}`,
+                }}>
+                  {TOP3.map((v) => {
+                    const isFirst = v.rank === 1;
+                    const blockH = isFirst ? 88 : 64;
+                    const avatarSz = isFirst ? 56 : 44;
+                    return (
+                      <div key={v.rank} style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {isFirst && <TrophyIcon size={13} color={C.purple} />}
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, color: isFirst ? C.purple : C.textMuted,
+                            textTransform: 'uppercase', letterSpacing: '0.5px',
+                          }}>#{v.rank}</span>
+                        </div>
+                        <Avatar initials={v.avatar} color={v.color} size={avatarSz} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{v.name}</span>
+                        <div style={{
+                          width: isFirst ? 96 : 80, height: blockH,
+                          background: isFirst ? C.purple : C.blush,
+                          borderRadius: '4px 4px 0 0',
+                          display: 'flex', flexDirection: 'column',
+                          alignItems: 'center', justifyContent: 'center', gap: 2,
+                          border: `1px solid ${isFirst ? C.purpleMid : C.border}`,
+                          borderBottom: 'none',
+                        }}>
+                          <span style={{
+                            fontSize: isFirst ? 18 : 15, fontWeight: 800,
+                            color: isFirst ? 'white' : C.text,
+                          }}>{v.points.toLocaleString()}</span>
+                          <span style={{
+                            fontSize: 9, fontWeight: 600,
+                            color: isFirst ? 'rgba(255,255,255,0.75)' : C.textMuted,
+                            textTransform: 'uppercase', letterSpacing: '0.5px',
+                          }}>pts</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-            {/* Make an impact */}
-            <Card accentColor={C.purple} title="Make an Impact, Earn More XP">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                {UPCOMING.map((ev, i) => (
-                  <div key={i} style={{
-                    borderRadius: 4, overflow: 'hidden',
-                    border: `1px solid ${C.border}`,
-                    background: C.blushLight,
-                  }}>
-                    <div style={{
-                      height: 64, background: C.blush,
-                      display: 'flex', alignItems: 'flex-start',
-                      justifyContent: 'space-between',
-                      padding: '8px 8px',
+                {/* Full list */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {ALL.map((v, i) => (
+                    <div key={v.rank} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '9px 10px', borderRadius: 4,
+                      background: i % 2 === 0 ? C.blushLight : 'transparent',
                     }}>
                       <span style={{
-                        background: C.purple, color: 'white',
-                        fontSize: 9, fontWeight: 700, padding: '3px 7px',
-                        borderRadius: 3, letterSpacing: '0.3px',
-                      }}>{ev.date}</span>
+                        width: 22, fontSize: 12, fontWeight: 700, textAlign: 'right',
+                        color: v.rank <= 3 ? C.purple : C.textMuted, flexShrink: 0,
+                      }}>#{v.rank}</span>
+                      <Avatar initials={v.avatar} color={v.color} size={30} />
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.text }}>{v.name}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.purple }}>{v.xp.toLocaleString()} XP</span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, color: C.textMuted,
+                        background: C.purpleLight, padding: '2px 8px', borderRadius: 3,
+                        letterSpacing: '0.3px',
+                      }}>Rank {v.rank}</span>
                     </div>
-                    <div style={{ padding: '8px 10px' }}>
-                      <p style={{
-                        fontSize: 11, fontWeight: 700, color: C.text,
-                        margin: '0 0 3px', lineHeight: 1.3,
-                      }}>{ev.title}</p>
-                      <p style={{ fontSize: 10, color: C.textMuted, margin: 0 }}>
-                        By {ev.creator}
+                  ))}
+                </div>
+              </Card>
+
+            </div>
+
+            {/* ── RIGHT ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Volunteer Spotlight */}
+              <Card accentColor={C.teal} title="Volunteer Spotlight">
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  marginBottom: 16, padding: '12px 14px',
+                  background: C.blushLight, border: `1px solid ${C.border}`,
+                  borderRadius: 4,
+                }}>
+                  <Avatar initials={SPOTLIGHT.avatar} color={SPOTLIGHT.color} size={48} />
+                  <div>
+                    <p style={{ fontSize: 16, fontWeight: 800, margin: 0, color: C.text }}>{SPOTLIGHT.name}</p>
+                    <p style={{ fontSize: 12, color: C.textSec, margin: '2px 0 0' }}>{SPOTLIGHT.role}</p>
+                    <p style={{ fontSize: 11, color: C.textMuted, margin: '2px 0 0' }}>
+                      {SPOTLIGHT.location}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  {[
+                    { label: 'Events',   value: SPOTLIGHT.events,   accent: C.purple },
+                    { label: 'Hours',    value: SPOTLIGHT.hours,    accent: C.teal   },
+                    { label: 'Referred', value: SPOTLIGHT.referred, accent: C.coral  },
+                  ].map(s => (
+                    <div key={s.label} style={{
+                      padding: '12px 8px', textAlign: 'center',
+                      background: C.blushLight, border: `1px solid ${C.border}`,
+                      borderRadius: 4, borderTop: `3px solid ${s.accent}`,
+                    }}>
+                      <p style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: 0 }}>{s.value}</p>
+                      <p style={{ fontSize: 10, color: C.textMuted, margin: '3px 0 0',
+                        fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        {s.label}
                       </p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
+                  ))}
+                </div>
+              </Card>
 
+              {/* Badges Earned */}
+              <Card accentColor={C.coral} title="Badges Earned">
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '16px 8px',
+                  justifyItems: 'center',
+                }}>
+                  {BADGES.map(b => (
+                    <Badge key={b.label} color={b.color} earned={b.earned} label={b.label} />
+                  ))}
+                </div>
+              </Card>
+
+              {/* Make an impact */}
+              <Card accentColor={C.purple} title="Make an Impact, Earn More XP">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                  {UPCOMING.map((ev, i) => (
+                    <div key={i} style={{
+                      borderRadius: 4, overflow: 'hidden',
+                      border: `1px solid ${C.border}`,
+                      background: C.blushLight,
+                    }}>
+                      <div style={{
+                        height: 64, background: C.blush,
+                        display: 'flex', alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        padding: '8px 8px',
+                      }}>
+                        <span style={{
+                          background: C.purple, color: 'white',
+                          fontSize: 9, fontWeight: 700, padding: '3px 7px',
+                          borderRadius: 3, letterSpacing: '0.3px',
+                        }}>{ev.date}</span>
+                      </div>
+                      <div style={{ padding: '8px 10px' }}>
+                        <p style={{
+                          fontSize: 11, fontWeight: 700, color: C.text,
+                          margin: '0 0 3px', lineHeight: 1.3,
+                        }}>{ev.title}</p>
+                        <p style={{ fontSize: 10, color: C.textMuted, margin: 0 }}>
+                          By {ev.creator}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+            </div>
           </div>
         </div>
       </div>

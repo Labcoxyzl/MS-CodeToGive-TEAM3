@@ -11,6 +11,7 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "@/app/styles/lemontree-theme.css";
 import styles from "./welcome.module.css";
+import dashStyles from "@/app/dashboard/dashboard.module.css";
 import Sidebar from "@/app/components/ui/Sidebar";
 
 export default function WelcomePage() {
@@ -18,6 +19,9 @@ export default function WelcomePage() {
   // controls sidebar visibility, search toggle, dropdown expansion,
   // map markers data, selected resource panel, and viewport position
 
+ const [isAuth, setIsAuth] = useState(false);
+  const [userState, setUserState] = useState({ name: '', initials: '' });
+  const [userLoading, setUserLoading] = useState(false);
  const [sidebarOpen, setSidebarOpen] = useState(false);
  const [searchOpen, setSearchOpen] = useState(false);
  const [searchQuery, setSearchQuery] = useState("");
@@ -110,64 +114,124 @@ function handleAreaSearch() {
    }
  }
 
-useEffect(() => {
-  loadMarkers({ minLng: -74.1, minLat: 40.7, maxLng: -73.8, maxLat: 40.9 });
-}, []);
+ useEffect(() => {
+   loadMarkers({ minLng: -74.1, minLat: 40.7, maxLng: -73.8, maxLat: 40.9 });
+   
+   const token = localStorage.getItem("access_token");
+   if (token) {
+     setIsAuth(true);
+     setUserLoading(true);
+     try {
+       const payload = JSON.parse(atob(token.split(".")[1]));
+       const userId = payload.sub;
+       
+       // Fetch name and initials if possible, or decode from token
+       const meta = payload?.user_metadata as Record<string, any> | undefined;
+       if (meta?.name) {
+         const name = meta.name;
+         const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
+         setUserState({ name, initials });
+         setUserLoading(false);
+       } else {
+         // Fallback to fetching from public.users if meta doesn't have it
+         const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+         if (anonKey && supabaseUrl) {
+           fetch(`${supabaseUrl}/rest/v1/users?id=eq.${userId}&select=name`, {
+             headers: {
+               'apikey': anonKey,
+               'Authorization': `Bearer ${token}`
+             }
+           })
+           .then(res => res.json())
+           .then(data => {
+             if (data?.[0]?.name) {
+               const name = data[0].name;
+               const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
+               setUserState({ name, initials });
+             }
+           })
+           .finally(() => setUserLoading(false));
+         } else {
+           setUserLoading(false);
+         }
+       }
+     } catch (e) {
+       console.error("Error decoding token:", e);
+       setUserLoading(false);
+     }
+   }
+ }, []);
 
 return (
   <div
   className={`lt-page ${styles.pageFont}`}
   style={{ flexDirection: "row", alignItems: "stretch" }}
 >
-    <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    {isAuth && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
 
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       {/* header */}
-      <header className="relative bg-[#ffcb00] border-b">
-        <div className="relative flex items-center justify-between px-4 py-3">
-          {/* search icon */}
-          <div className="flex items-center gap-4 flex-shrink-0 relative">
-  <button
-  type="button"
-  onClick={() => setSidebarOpen((prev) => !prev)}
-  aria-label="Toggle menu"
-  className={styles.headerToggle}
->
-   <span className="leading-none">{sidebarOpen ? "✕" : "☰"}</span>
-</button>
+      <header className={dashStyles.topBar} style={{ position: 'relative' }}>
+        {/* Left Spacer to maintain logo centering */}
+        <div style={{ width: '200px' }} />
 
-  <Search
-    className="w-6 h-6 cursor-pointer text-white"
-    onClick={() => setSearchOpen(!searchOpen)}
-  />
-</div>
-
-          {/* logo */}
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <Link href="https://www.foodhelpline.org/" className="flex items-center gap-2">
-              <img src="/logo_icon.svg" className="h-7 md:h-9 w-auto" alt="logo icon" />
-              <img
-                src="/logo_name.svg"
-                className="hidden sm:block h-7 md:h-9 w-auto"
-                alt="logo name"
+        {/* Center: Logo */}
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', alignItems: 'center' }}>
+          <Link href="/" className="lt-header__logo">
+            <span>
+              <Image
+                src="/logo.svg"
+                alt="Lemontree Icon"
+                width={32}
+                height={32}
+                priority
               />
-            </Link>
-          </div>
+              <Image
+                src="/lemontree_text_logo.svg"
+                alt="Lemontree"
+                width={112}
+                height={24}
+                priority
+              />
+            </span>
+          </Link>
+        </div>
 
-          {/* auth buttons */}
-          <div className="flex justify-end gap-2 md:gap-4 flex-shrink-0">
-            <Link href="/login">
-              <button className="px-3 md:px-6 py-2 border-2 border-black text-black rounded-lg tracking-wide hover:bg-yellow-400 transition text-sm md:text-base">
-                LOG IN
-              </button>
-            </Link>
+        {/* Right: Actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", justifyContent: "flex-end", width: "300px" }}>
+          <Search
+            className="w-6 h-6 cursor-pointer text-[#2D2A26] opacity-70 hover:opacity-100 transition-opacity"
+            onClick={() => setSearchOpen(!searchOpen)}
+          />
 
-            <Link href="/signup">
-              <button className="px-3 md:px-6 py-2 rounded-lg text-white tracking-wide bg-gradient-to-r from-[#6b4bc3] to-[#7f5bd6] shadow-md hover:opacity-90 transition text-sm md:text-base">
-                GET STARTED
-              </button>
+          {!isAuth ? (
+            <div className="flex gap-3">
+              <Link href="/login">
+                <button className="px-4 py-2 border-2 border-[#2D2A26] text-[#2D2A26] font-bold rounded-lg hover:bg-black/5 transition cursor-pointer text-sm">
+                  LOG IN
+                </button>
+              </Link>
+              <Link href="/signup">
+                <button className="px-4 py-2 rounded-lg text-white font-bold bg-gradient-to-r from-[#6b4bc3] to-[#7f5bd6] shadow-md hover:shadow-lg transition cursor-pointer text-sm">
+                  GET STARTED
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <Link href="/profile" className={dashStyles.topBarUser} style={{ textDecoration: "none", color: "inherit" }}>
+              {userLoading ? (
+                <div className="lt-spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--lt-color-brand-primary)' }} />
+              ) : (
+                <>
+                  <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)", width: 32, height: 32, fontSize: 14 }}>
+                    {userState.initials || 'V'}
+                  </div>
+                  <span className="hidden sm:inline" style={{ fontSize: 14 }}>{userState.name || 'Volunteer'}</span>
+                </>
+              )}
             </Link>
-          </div>
+          )}
         </div>
       </header>
 

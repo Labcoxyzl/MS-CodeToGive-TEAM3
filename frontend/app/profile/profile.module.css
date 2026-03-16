@@ -10,9 +10,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
+  gap: 12px;
+  padding: 14px 40px;
   background: var(--lt-yellow);
-  border-bottom: 1px solid var(--lt-border);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.topBarUser {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--lt-text-primary);
 }
 
 .profileContent {

@@ -254,12 +254,6 @@ export default function ManageEventPage() {
 
         {/* ── Top Bar ─────────────────────────────────────────────── */}
         <div className={styles.topBar}>
-          <button
-            className="lt-sidebar-toggle lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-            style={{ position: "static", display: "flex", width: 40, height: 40 }}
-          >☰</button>
-
           <Link href="/" className="lt-header__logo">
             <span>
               <Image src="/logo.svg" alt="Lemontree Icon" width={32} height={32} priority />

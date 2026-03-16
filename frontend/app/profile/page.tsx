@@ -4,7 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/app/components/ui/Sidebar";
+import Image from "next/image";
 import styles from "./profile.module.css";
+import dashStyles from "../dashboard/dashboard.module.css";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function getInitials(name: string) {
   if (!name) return "V";
@@ -79,10 +85,6 @@ export default function ProfilePage() {
       return;
     }
     setIsAuthorized(true);
-
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-    const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
     let userId = "";
     try {
@@ -190,8 +192,6 @@ export default function ProfilePage() {
     if (!user) return;
     setSaving(true);
     const token = localStorage.getItem("access_token");
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-    const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
     await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${user.id}`, {
       method: "PATCH",
@@ -212,19 +212,43 @@ export default function ProfilePage() {
   if (!isAuthorized) return null;
 
   return (
-    <div className="lt-page" style={{ flexDirection: "row", alignItems: "stretch" }}>
+    <div className={dashStyles.dashboardShell}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className={styles.profileMain}>
+      <div className={dashStyles.dashboardMain}>
         {/* Top Bar */}
-        <div className={styles.topBar}>
+        <div className={dashStyles.topBar}>
           <Link href="/" className="lt-header__logo">
             <span>
-              <span className="lt-header__logo-icon" aria-hidden="true" />
-              lemontree
+              <Image
+                src="/logo.svg"
+                alt="Lemontree Icon"
+                width={32}
+                height={32}
+                priority
+              />
+              <Image
+                src="/lemontree_text_logo.svg"
+                alt="Lemontree"
+                width={112}
+                height={24}
+                priority
+              />
             </span>
           </Link>
+          <div className={dashStyles.topBarUser}>
+            {loading ? (
+              <div className="lt-spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--lt-color-brand-primary)' }} />
+            ) : (
+              <>
+                <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)" }}>{getInitials(user?.name ?? "V")}</div>
+                <span>{user?.name || "Volunteer"}</span>
+              </>
+            )}
+          </div>
         </div>
+
+        <div className={dashStyles.dashboardContent}>
 
         {/* Content */}
         {loading ? (
@@ -441,6 +465,7 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       <button
