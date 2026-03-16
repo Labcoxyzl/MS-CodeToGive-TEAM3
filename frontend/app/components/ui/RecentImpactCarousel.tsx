@@ -1,8 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { RecentEvent } from "@/app/dashboard/mockData";
+import cardStyles from "@/app/events/components/EventCard.module.css";
 import styles from "@/app/dashboard/dashboard.module.css";
+
+function staticTileUrl(lat: number, lng: number, zoom = 14): string {
+  const z = zoom;
+  const x = Math.floor(((lng + 180) / 360) * Math.pow(2, z));
+  const latRad = (lat * Math.PI) / 180;
+  const y = Math.floor(
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
+      Math.pow(2, z)
+  );
+  return `https://a.basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`;
+}
 
 interface RecentImpactCarouselProps {
   events: RecentEvent[];
@@ -10,16 +23,29 @@ interface RecentImpactCarouselProps {
 
 export default function RecentImpactCarousel({ events }: RecentImpactCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const visibleCount = 3;
   const maxIndex = Math.max(0, events.length - visibleCount);
 
+  function scrollToIndex(index: number) {
+    if (!wrapperRef.current) return;
+    const wrapper = wrapperRef.current;
+    const step = wrapper.clientWidth / visibleCount + 5;
+    wrapper.scrollTo({ left: index * step, behavior: "smooth" });
+  }
+
   function prev() {
-    setCurrentIndex((i) => Math.max(0, i - 1));
+    const newIndex = Math.max(0, currentIndex - 1);
+    setCurrentIndex(newIndex);
+    scrollToIndex(newIndex);
   }
 
   function next() {
-    setCurrentIndex((i) => Math.min(maxIndex, i + 1));
+    const newIndex = Math.min(maxIndex, currentIndex + 1);
+    setCurrentIndex(newIndex);
+    scrollToIndex(newIndex);
   }
 
   return (
@@ -34,28 +60,61 @@ export default function RecentImpactCarousel({ events }: RecentImpactCarouselPro
           ‹
         </button>
 
-        <div className={styles.carouselTrackWrapper}>
-          <div
-            className={styles.carouselTrack}
-            style={{
-              transform: `translateX(-${currentIndex * (100 / visibleCount)}%)`,
-            }}
-          >
+        <div className={styles.carouselTrackWrapper} ref={wrapperRef}>
+          <div className={styles.carouselTrack}>
             {events.map((event) => (
-              <div key={event.id} className={styles.carouselCard}>
-                <div
-                  className={styles.carouselCardImage}
-                  style={{ background: event.imageGradient }}
-                >
-                  <span className={styles.carouselCardDate}>
-                    {event.date} @ {event.time}
-                  </span>
+              <div
+                key={event.id}
+                className={`${cardStyles.card} ${styles.carouselCard}`}
+                onClick={() => router.push(`/events/${event.id}`)}
+              >
+                <div className={cardStyles.imageWrapper}>
+                  {event.latitude != null && event.longitude != null ? (
+                    <div className={cardStyles.mapContainer} style={{ position: "relative", overflow: "hidden" }}>
+                      <img
+                        src={staticTileUrl(event.latitude, event.longitude)}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                        draggable={false}
+                      />
+                      <div style={{
+                        position: "absolute",
+                        top: "50%", left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: 14, height: 14,
+                        background: "#2E8B7A",
+                        borderRadius: "50%",
+                        border: "2.5px solid #fff",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+                        pointerEvents: "none",
+                      }} />
+                    </div>
+                  ) : (
+                    <div
+                      className={cardStyles.imagePlaceholder}
+                      style={{ background: event.imageGradient }}
+                    />
+                  )}
+                  <span className={cardStyles.pastBadge}>Past</span>
                 </div>
-                <div className={styles.carouselCardInfo}>
-                  <span className={styles.carouselCardTitle}>{event.title}</span>
-                  <span className={styles.carouselCardLocation}>
-                    📍 {event.location} · {event.volunteersCount} volunteers
-                  </span>
+                <div className={cardStyles.pastOverlay} />
+                <div className={cardStyles.body}>
+                  <div className={cardStyles.title}>{event.title}</div>
+                  <div className={cardStyles.meta}>
+                    <span className={cardStyles.metaIcon}>📅</span>
+                    {event.date} · {event.time}
+                  </div>
+                  {event.location && (
+                    <div className={cardStyles.meta}>
+                      <span className={cardStyles.metaIcon}>📍</span>
+                      {event.location}
+                    </div>
+                  )}
+                  <div className={cardStyles.footer}>
+                    <span className={cardStyles.capacity}>
+                      👥 {event.volunteersCount} volunteers
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -72,14 +131,13 @@ export default function RecentImpactCarousel({ events }: RecentImpactCarouselPro
         </button>
       </div>
 
-      {/* Dots */}
       <div className="lt-carousel-dots">
-        {events.map((_, idx) => (
+        {Array.from({ length: maxIndex + 1 }).map((_, idx) => (
           <button
             key={idx}
             className={`lt-carousel-dot${idx === currentIndex ? " lt-carousel-dot--active" : ""}`}
-            onClick={() => setCurrentIndex(Math.min(idx, maxIndex))}
-            aria-label={`Go to event ${idx + 1}`}
+            onClick={() => { setCurrentIndex(idx); scrollToIndex(idx); }}
+            aria-label={`Go to position ${idx + 1}`}
           />
         ))}
       </div>
