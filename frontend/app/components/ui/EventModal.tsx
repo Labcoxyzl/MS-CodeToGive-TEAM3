@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./EventModal.module.css";
 
 interface EventPhoto {
@@ -36,6 +37,7 @@ export default function EventModal({ eventId, onClose, onRegistrationChange }: E
   const [isJoined, setIsJoined] = useState(false);
   const [attendLoading, setAttendLoading] = useState(false);
   const [attendError, setAttendError] = useState("");
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -264,10 +266,17 @@ export default function EventModal({ eventId, onClose, onRegistrationChange }: E
 
             <div className={styles.modalFooter}>
                {attendError && <div className="lt-error-text" style={{ alignSelf: "center", marginRight: "auto" }}>{attendError}</div>}
+               <Link
+                 href={`/events/${eventData.id}`}
+                 className={`lt-btn lt-btn--outline ${styles.attendBtn}`}
+                 onClick={onClose}
+               >
+                 View Event Page
+               </Link>
                {isJoined ? (
-                 <button 
-                   className={`lt-btn lt-btn--outline ${styles.attendBtn}`} 
-                   onClick={handleCancelRegistration}
+                 <button
+                   className={`lt-btn lt-btn--outline ${styles.attendBtn}`}
+                   onClick={() => setShowConfirmCancel(true)}
                    disabled={attendLoading}
                  >
                    {attendLoading ? <span className="lt-spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> : "Cancel Registration"}
@@ -285,6 +294,66 @@ export default function EventModal({ eventId, onClose, onRegistrationChange }: E
           </>
         ) : null}
       </div>
+
+      {showConfirmCancel && (
+        <>
+          <div
+            onClick={() => setShowConfirmCancel(false)}
+            style={{
+              position: "fixed", inset: 0,
+              background: "rgba(0,0,0,0.45)",
+              zIndex: 1100,
+              backdropFilter: "blur(2px)",
+            }}
+          />
+          <div style={{
+            position: "fixed",
+            top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 1101,
+            background: "white",
+            borderRadius: "var(--lt-radius-lg)",
+            padding: "32px 28px",
+            maxWidth: 380,
+            width: "calc(100vw - 48px)",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+            textAlign: "center",
+          }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--lt-text-primary)", marginBottom: 10 }}>
+              Unregister from this event?
+            </h2>
+            <p style={{ fontSize: 14, color: "var(--lt-text-secondary)", lineHeight: 1.6, marginBottom: 24 }}>
+              Your spot will be released and you won&apos;t be registered anymore.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                onClick={() => setShowConfirmCancel(false)}
+                style={{
+                  padding: "10px 22px", fontSize: 14, fontWeight: 600,
+                  borderRadius: "var(--lt-radius-full)",
+                  border: "2px solid var(--lt-border)",
+                  background: "transparent", color: "var(--lt-text-secondary)",
+                  cursor: "pointer",
+                }}
+              >
+                Keep registration
+              </button>
+              <button
+                onClick={() => { setShowConfirmCancel(false); handleCancelRegistration(); }}
+                style={{
+                  padding: "10px 22px", fontSize: 14, fontWeight: 700,
+                  borderRadius: "var(--lt-radius-full)",
+                  border: "none",
+                  background: "var(--lt-error)", color: "white",
+                  cursor: "pointer",
+                }}
+              >
+                Yes, unregister
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

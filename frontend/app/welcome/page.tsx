@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import {Search, ChevronDown, ChevronUp, Hand } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import {Search} from "lucide-react";
 import {useState, useEffect} from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import Map, {Marker} from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -29,10 +27,18 @@ export default function WelcomePage() {
  const [markers, setMarkers] = useState<
   { id: string; lng: number; lat: number; type: string; name?: string }[]
 >([]);
+ // upcoming event markers fetched from backend
+ const [eventMarkers, setEventMarkers] = useState<
+  { id: string; lng: number; lat: number; title: string; date: string; start_time: string; end_time: string; location_name: string | null; current_signup_count: number; volunteer_limit: number | null }[]
+>([]);
+ // selected event shown in floating detail panel
+ const [selectedEvent, setSelectedEvent] = useState<typeof eventMarkers[number] | null>(null);
 // current map viewport (center + zoom)
  const [viewState, setViewState] = useState({ longitude: -73.94, latitude: 40.82, zoom: 11 });
  // selected resource shown in floating detail panel
  const [selectedResource, setSelectedResource] = useState<any>(null);
+ // coords of the last clicked resource marker
+ const [selectedMarkerCoords, setSelectedMarkerCoords] = useState<{lat:number;lng:number}|null>(null);
  // loading spinner state when fetching resource details
  const [loadingResource, setLoadingResource] = useState(false);
  // loading spinner state when fetching resource details
@@ -66,8 +72,10 @@ function handleAreaSearch() {
   }));
 }
 // fetch full resource details when a marker is clicked
- async function handleMarkerClick(id: string) {
+ async function handleMarkerClick(id: string, coords: {lat:number;lng:number}) {
+   setSelectedEvent(null);
    setSelectedResource(null);
+   setSelectedMarkerCoords(coords);
    setLoadingResource(true);
    try {
      const res = await fetch(`https://platform.foodhelpline.org/api/resources/${id}`);
@@ -116,6 +124,29 @@ function handleAreaSearch() {
 
  useEffect(() => {
    loadMarkers({ minLng: -74.1, minLat: 40.7, maxLng: -73.8, maxLat: 40.9 });
+
+   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+   fetch(`${apiUrl}/api/v1/events/?status=upcoming&limit=100`)
+     .then((r) => r.json())
+     .then((data: { id: string; title: string; date: string; start_time: string; end_time: string; location_name: string | null; latitude: number | null; longitude: number | null; current_signup_count: number; volunteer_limit: number | null }[]) => {
+       setEventMarkers(
+         data
+           .filter((e) => e.latitude != null && e.longitude != null)
+           .map((e) => ({
+             id: e.id,
+             lng: e.longitude!,
+             lat: e.latitude!,
+             title: e.title,
+             date: e.date,
+             start_time: e.start_time,
+             end_time: e.end_time,
+             location_name: e.location_name,
+             current_signup_count: e.current_signup_count,
+             volunteer_limit: e.volunteer_limit,
+           }))
+       );
+     })
+     .catch(() => {/* silently ignore if backend is unreachable */});
    
    const token = localStorage.getItem("access_token");
    if (token) {
@@ -286,7 +317,7 @@ return (
               {markers.map((m) => (
                 <Marker key={m.id} longitude={m.lng} latitude={m.lat} anchor="center">
                   <div
-                    onClick={() => handleMarkerClick(m.id)}
+                    onClick={() => handleMarkerClick(m.id, { lat: m.lat, lng: m.lng })}
                     title={m.type === "SOUP_KITCHEN" ? "Soup Kitchen" : "Food Pantry"}
                     style={{
                       width: 14,
@@ -297,6 +328,28 @@ return (
                       boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
                       cursor: "pointer",
                       transition: "transform 0.15s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.6)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                  />
+                </Marker>
+              ))}
+              {eventMarkers.map((ev) => (
+                <Marker key={`event-${ev.id}`} longitude={ev.lng} latitude={ev.lat} anchor="center" style={{ zIndex: 10 }}>
+                  <div
+                    onClick={() => { setSelectedResource(null); setLoadingResource(false); setSelectedEvent(ev); }}
+                    title={ev.title}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      border: "3px solid white",
+                      background: "#22c55e",
+                      boxShadow: "0 2px 8px rgba(34,197,94,0.7)",
+                      cursor: "pointer",
+                      transition: "transform 0.15s",
+                      zIndex: 10,
+                      position: "relative",
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.6)")}
                     onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
@@ -442,8 +495,133 @@ return (
                       Visit website →
                     </a>
                   )}
+
+                  {(() => {
+                    const name = [
+                      selectedResource?.name,
+                      selectedResource?.addressStreet1,
+                      selectedResource?.city,
+                      selectedResource?.state,
+                    ].filter(Boolean).join(", ");
+                    const lat = selectedMarkerCoords?.lat;
+                    const lng = selectedMarkerCoords?.lng;
+                    const params = new URLSearchParams();
+                    if (name) params.set("location_name", name);
+                    if (lat != null) params.set("lat", String(lat));
+                    if (lng != null) params.set("lng", String(lng));
+                    return (
+                      <a
+                        href={`/events/create?${params.toString()}`}
+                        style={{
+                          display: "inline-block",
+                          marginTop: 10,
+                          fontSize: 13,
+                          color: "white",
+                          fontWeight: 600,
+                          background: "#2E8B7A",
+                          padding: "6px 14px",
+                          borderRadius: 6,
+                          textDecoration: "none",
+                        }}
+                      >
+                        + Create event here
+                      </a>
+                    );
+                  })()}
                 </>
               )}
+            </div>
+          )}
+
+          {/* Event detail panel */}
+          {selectedEvent && (
+            <div
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                zIndex: 30,
+                width: 280,
+                background: "white",
+                borderRadius: 12,
+                boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+                padding: 20,
+              }}
+            >
+              <button
+                onClick={() => setSelectedEvent(null)}
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 12,
+                  background: "none",
+                  border: "none",
+                  fontSize: 18,
+                  cursor: "pointer",
+                  color: "#666",
+                }}
+              >
+                ✕
+              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    padding: "2px 8px",
+                    borderRadius: 99,
+                    background: "#dcfce7",
+                    color: "#16a34a",
+                  }}
+                >
+                  Upcoming Event
+                </span>
+              </div>
+
+              <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#1a1a1a" }}>
+                {selectedEvent.title}
+              </h3>
+
+              {selectedEvent.location_name && (
+                <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
+                  📍 {selectedEvent.location_name}
+                </p>
+              )}
+
+              <p style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>
+                📅{" "}
+                {new Date(selectedEvent.date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </p>
+
+              <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
+                🕐{" "}
+                {selectedEvent.start_time.slice(0, 5)} – {selectedEvent.end_time.slice(0, 5)}
+              </p>
+
+              <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
+                👥 {selectedEvent.current_signup_count}
+                {selectedEvent.volunteer_limit ? ` / ${selectedEvent.volunteer_limit}` : ""} volunteers
+              </p>
+
+              <a
+                href={`/events/${selectedEvent.id}`}
+                style={{
+                  display: "inline-block",
+                  marginTop: 12,
+                  fontSize: 13,
+                  color: "#16a34a",
+                  fontWeight: 600,
+                }}
+              >
+                View event →
+              </a>
             </div>
           )}
 
