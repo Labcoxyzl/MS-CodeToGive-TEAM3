@@ -15,6 +15,10 @@ A full-stack self-serve platform for Lemontree nonprofit volunteers to independe
 - Python 3.11+
 - A [Supabase](https://supabase.com) project
 
+## Documentation
+
+- [Build Plan](docs/BUILD_PLAN.md) — Full implementation plan with system architecture, data model, API design, and phased roadmap
+
 ## Configuration
 
 Copy the example environment file and fill in your values:
@@ -76,7 +80,3 @@ MS-CodeToGive-TEAM3/
 │   └── BUILD_PLAN.md    # Full architecture and implementation plan
 └── .env.example         # Environment variable template
 ```
-
-## Documentation
-
-- [Build Plan](docs/BUILD_PLAN.md) — Full implementation plan with system architecture, data model, API design, and phased roadmap
