@@ -50,11 +50,13 @@ const BADGES = [
   { label: 'Community Hero',  icon: '★', color: C.purple,  earned: false },
 ];
 
-const UPCOMING = [
-  { date: 'Mon 03/16', title: 'Food Pantry Drive',  creator: 'Alex T.'   },
-  { date: 'Mon 03/16', title: 'Community Clean-Up', creator: 'Jordan M.' },
-  { date: 'Mon 03/16', title: 'Clothing Donation',  creator: 'Sam R.'    },
-];
+interface UpcomingEvent {
+  id: string;
+  title: string;
+  date: string;
+  location_name?: string;
+  start_time?: string;
+}
 
 const PERIODS = ['All time', 'This month', 'This week'];
 
@@ -147,9 +149,12 @@ export default function LeaderboardPage() {
   const [userLoading, setUserLoading] = useState(false);
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [lbLoading, setLbLoading] = useState(true);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
   useEffect(() => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+
     fetch(`${API_URL}/api/v1/leaderboard?limit=20`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
@@ -166,6 +171,23 @@ export default function LeaderboardPage() {
         }
       })
       .finally(() => setLbLoading(false));
+
+    fetch(`${API_URL}/api/v1/events?status=upcoming&limit=3`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const list = Array.isArray(data) ? data : data?.events ?? [];
+        setUpcomingEvents(list.slice(0, 3).map((ev: { id: string; title: string; date?: string; start_time?: string; location_name?: string }) => {
+          const d = new Date(ev.start_time || ev.date || Date.now());
+          return {
+            id: ev.id,
+            title: ev.title,
+            date: d.toLocaleDateString('en-US', { weekday: 'short', month: '2-digit', day: '2-digit' }),
+            location_name: ev.location_name,
+            start_time: ev.start_time,
+          };
+        }));
+      })
+      .finally(() => setEventsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -436,39 +458,87 @@ export default function LeaderboardPage() {
                 </div>
               </Card>
 
-              {/* Make an impact */}
-              <Card accentColor={C.purple} title="Make an Impact, Earn More XP">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                  {UPCOMING.map((ev, i) => (
-                    <div key={i} style={{
-                      borderRadius: 4, overflow: 'hidden',
-                      border: `1px solid ${C.border}`,
-                      background: C.blushLight,
+              {/* How to earn XP */}
+              <Card accentColor={C.yellow} title="How to Earn XP">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[
+                    { action: 'Volunteer at an event', rate: '10 pts / hr', active: true,  icon: '🙌' },
+                    { action: 'Refer a new volunteer', rate: 'Bonus pts',   active: false, icon: '👥' },
+                    { action: 'Upload event photo',    rate: 'Bonus pts',   active: false, icon: '📸' },
+                    { action: 'Distribute a flyer',    rate: 'Bonus pts',   active: false, icon: '📄' },
+                  ].map(item => (
+                    <div key={item.action} style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '8px 10px', borderRadius: 4,
+                      background: item.active ? C.purpleLight : C.blushLight,
+                      border: `1px solid ${item.active ? C.purple + '44' : C.border}`,
+                      opacity: item.active ? 1 : 0.6,
                     }}>
-                      <div style={{
-                        height: 64, background: C.blush,
-                        display: 'flex', alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        padding: '8px 8px',
+                      <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                      <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.text }}>{item.action}</span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700,
+                        color: item.active ? C.purple : C.textMuted,
+                        background: item.active ? C.purple + '18' : 'transparent',
+                        padding: item.active ? '2px 7px' : '0',
+                        borderRadius: 3,
+                        whiteSpace: 'nowrap',
                       }}>
-                        <span style={{
-                          background: C.purple, color: 'white',
-                          fontSize: 9, fontWeight: 700, padding: '3px 7px',
-                          borderRadius: 3, letterSpacing: '0.3px',
-                        }}>{ev.date}</span>
-                      </div>
-                      <div style={{ padding: '8px 10px' }}>
-                        <p style={{
-                          fontSize: 11, fontWeight: 700, color: C.text,
-                          margin: '0 0 3px', lineHeight: 1.3,
-                        }}>{ev.title}</p>
-                        <p style={{ fontSize: 10, color: C.textMuted, margin: 0 }}>
-                          By {ev.creator}
-                        </p>
-                      </div>
+                        {item.active ? item.rate : 'Coming soon'}
+                      </span>
                     </div>
                   ))}
                 </div>
+              </Card>
+
+              {/* Make an impact */}
+              <Card accentColor={C.purple} title="Make an Impact, Earn More XP">
+                {eventsLoading ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+                    <div className="lt-spinner" style={{ width: 24, height: 24, borderTopColor: C.purple }} />
+                  </div>
+                ) : upcomingEvents.length === 0 ? (
+                  <p style={{ fontSize: 12, color: C.textMuted, textAlign: 'center', padding: '12px 0' }}>
+                    No upcoming events right now.
+                  </p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${upcomingEvents.length}, 1fr)`, gap: 10 }}>
+                    {upcomingEvents.map((ev) => (
+                      <Link key={ev.id} href={`/events/${ev.id}`} style={{ textDecoration: 'none' }}>
+                        <div style={{
+                          borderRadius: 4, overflow: 'hidden',
+                          border: `1px solid ${C.border}`,
+                          background: C.blushLight,
+                          cursor: 'pointer',
+                          transition: 'box-shadow 0.15s',
+                        }}>
+                          <div style={{
+                            height: 48, background: C.blush,
+                            display: 'flex', alignItems: 'flex-start',
+                            padding: '8px 8px',
+                          }}>
+                            <span style={{
+                              background: C.purple, color: 'white',
+                              fontSize: 9, fontWeight: 700, padding: '3px 7px',
+                              borderRadius: 3, letterSpacing: '0.3px',
+                            }}>{ev.date}</span>
+                          </div>
+                          <div style={{ padding: '8px 10px' }}>
+                            <p style={{
+                              fontSize: 11, fontWeight: 700, color: C.text,
+                              margin: '0 0 3px', lineHeight: 1.3,
+                            }}>{ev.title}</p>
+                            {ev.location_name && (
+                              <p style={{ fontSize: 10, color: C.textMuted, margin: 0 }}>
+                                {ev.location_name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </Card>
 
             </div>
