@@ -147,7 +147,7 @@ export default function AdminCharts({ part = "all" }: { part?: "top" | "bottom" 
               </Pie>
               <Tooltip
                 contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
-                formatter={(v, name) => [`${v} (${total ? Math.round(Number(v) / total * 100) : 0}%)`, name]}
+                formatter={(v: number | string | (number | string)[], name: string | number) => [`${v} (${total ? Math.round(Number(v) / total * 100) : 0}%)`, name]}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -188,11 +188,11 @@ export default function AdminCharts({ part = "all" }: { part?: "top" | "bottom" 
           >
             <CartesianGrid horizontal={false} stroke="#f0f0f0" />
             <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: "#9ca3af" }} tickLine={false} axisLine={false}
-              tickFormatter={(v) => `${v}%`} />
+              tickFormatter={(v: number) => `${v}%`} />
             <YAxis type="category" dataKey="title" tick={{ fontSize: 11, fill: "#6b7280" }} tickLine={false} axisLine={false} width={140} />
             <Tooltip
               contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
-              formatter={(v, _name, entry: any) =>
+              formatter={(v: number | string | (number | string)[], _name: string | number, entry: any) =>
                 [`${v}% (${entry.payload.attended}/${entry.payload.signups} checked in)`, "Participation"]
               }
             />
