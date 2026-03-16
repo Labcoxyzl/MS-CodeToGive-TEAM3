@@ -25,9 +25,10 @@ interface EventDetails {
 interface EventModalProps {
   eventId: string | null;
   onClose: () => void;
+  onRegistrationChange?: (eventId: string, registered: boolean) => void;
 }
 
-export default function EventModal({ eventId, onClose }: EventModalProps) {
+export default function EventModal({ eventId, onClose, onRegistrationChange }: EventModalProps) {
   const [eventData, setEventData] = useState<EventDetails | null>(null);
   const [photos, setPhotos] = useState<EventPhoto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -153,7 +154,8 @@ export default function EventModal({ eventId, onClose }: EventModalProps) {
       }
       
       // Success
-      onClose(); // Automatically close out modal
+      onRegistrationChange?.(eventId, true);
+      onClose();
     } catch (err: unknown) {
       setAttendError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
@@ -189,7 +191,8 @@ export default function EventModal({ eventId, onClose }: EventModalProps) {
       }
       
       // Success
-      onClose(); 
+      onRegistrationChange?.(eventId, false);
+      onClose();
     } catch (err: unknown) {
       setAttendError(err instanceof Error ? err.message : "An unexpected error occurred.");
     } finally {
