@@ -460,34 +460,72 @@ export default function LeaderboardPage() {
 
               {/* How to earn XP */}
               <Card accentColor={C.yellow} title="How to Earn XP">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { action: 'Volunteer at an event', rate: '10 pts / hr', active: true,  icon: '🙌' },
-                    { action: 'Refer a new volunteer', rate: 'Bonus pts',   active: false, icon: '👥' },
-                    { action: 'Upload event photo',    rate: 'Bonus pts',   active: false, icon: '📸' },
-                    { action: 'Distribute a flyer',    rate: 'Bonus pts',   active: false, icon: '📄' },
-                  ].map(item => (
-                    <div key={item.action} style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '8px 10px', borderRadius: 4,
-                      background: item.active ? C.purpleLight : C.blushLight,
-                      border: `1px solid ${item.active ? C.purple + '44' : C.border}`,
-                      opacity: item.active ? 1 : 0.6,
-                    }}>
-                      <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-                      <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.text }}>{item.action}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700,
-                        color: item.active ? C.purple : C.textMuted,
-                        background: item.active ? C.purple + '18' : 'transparent',
-                        padding: item.active ? '2px 7px' : '0',
-                        borderRadius: 3,
-                        whiteSpace: 'nowrap',
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                  {/* Volunteer section */}
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px' }}>
+                      As a Volunteer
+                    </p>
+                    {[
+                      { action: 'Attend an event',       rate: '10 pts / hr', active: true,  icon: '🙌' },
+                      { action: 'Refer a new volunteer', rate: 'Bonus pts',   active: false, icon: '👥' },
+                      { action: 'Upload event photo',    rate: 'Bonus pts',   active: false, icon: '📸' },
+                      { action: 'Distribute a flyer',    rate: 'Bonus pts',   active: false, icon: '📄' },
+                    ].map(item => (
+                      <div key={item.action} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '7px 10px', borderRadius: 4, marginBottom: 6,
+                        background: item.active ? C.purpleLight : C.blushLight,
+                        border: `1px solid ${item.active ? C.purple + '44' : C.border}`,
+                        opacity: item.active ? 1 : 0.6,
                       }}>
-                        {item.active ? item.rate : 'Coming soon'}
-                      </span>
-                    </div>
-                  ))}
+                        <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.text }}>{item.action}</span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700,
+                          color: item.active ? C.purple : C.textMuted,
+                          background: item.active ? C.purple + '18' : 'transparent',
+                          padding: item.active ? '2px 7px' : '0',
+                          borderRadius: 3, whiteSpace: 'nowrap',
+                        }}>
+                          {item.active ? item.rate : 'Coming soon'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Leader section */}
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 6px' }}>
+                      As an Event Leader
+                    </p>
+                    {[
+                      { action: 'Lead an event',              rate: '15 pts / hr', active: true, icon: '⭐' },
+                      { action: 'Per volunteer who attended', rate: '+5 pts each',  active: true, icon: '👥' },
+                    ].map(item => (
+                      <div key={item.action} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '7px 10px', borderRadius: 4, marginBottom: 6,
+                        background: C.tealLight,
+                        border: `1px solid ${C.teal + '55'}`,
+                      }}>
+                        <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: C.text }}>{item.action}</span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, color: C.teal,
+                          background: C.teal + '18', padding: '2px 7px',
+                          borderRadius: 3, whiteSpace: 'nowrap',
+                        }}>
+                          {item.rate}
+                        </span>
+                      </div>
+                    ))}
+                    <p style={{ fontSize: 11, color: C.textMuted, margin: '4px 0 0', fontStyle: 'italic' }}>
+                      Points awarded when you mark your event as completed.
+                    </p>
+                  </div>
+
                 </div>
               </Card>
 
