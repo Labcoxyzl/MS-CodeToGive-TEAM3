@@ -153,13 +153,12 @@ async def _reverse_geocode(lat: float, lng: float) -> str:
             resp.raise_for_status()
             data = resp.json()
             addr = data.get("address", {})
-            parts = [
-                addr.get("road") or addr.get("pedestrian"),
-                addr.get("suburb") or addr.get("neighbourhood"),
-                addr.get("city") or addr.get("town") or addr.get("village"),
-                addr.get("state"),
-            ]
-            return ", ".join(p for p in parts if p)
+            line1 = ", ".join(p for p in [addr.get("road") or addr.get("pedestrian"),
+                                           addr.get("suburb") or addr.get("neighbourhood")] if p)
+            line2 = ", ".join(p for p in [addr.get("city") or addr.get("town") or addr.get("village"),
+                                           addr.get("state")] if p)
+            lines = [l for l in [line1, line2] if l]
+            return "\n".join(lines)
     except Exception:
         return ""
 
@@ -197,6 +196,7 @@ async def generate_flyer(event_id: str, current_user: CurrentUser):
     location_display = event.get("location_name") or await _reverse_geocode(
         event["latitude"], event["longitude"]
     )
+    address_line_count = len(location_display.splitlines()) if location_display else 1
 
     map_b64 = await _build_map_b64(event["latitude"], event["longitude"])
 
@@ -210,6 +210,7 @@ async def generate_flyer(event_id: str, current_user: CurrentUser):
         start_time_fmt=start_fmt,
         end_time_fmt=end_fmt,
         location_display=location_display,
+        address_line_count=address_line_count,
         map_b64=map_b64,
     )
 
