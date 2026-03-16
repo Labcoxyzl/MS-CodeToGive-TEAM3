@@ -148,7 +148,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         <button
           onClick={handleLogout}
-          className="lt-sidebar__link"
+          className="lt-sidebar__link lt-sidebar__link--logout"
           style={{ color: "var(--lt-coral)", background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "left", marginTop: 8 }}
         >
           <svg className="lt-sidebar__icon" viewBox="0 0 20 20" fill="currentColor">
