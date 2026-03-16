@@ -542,7 +542,7 @@ export default function CreateEventPage() {
           <div style={{background:C.purple,padding:'9px 18px',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.8px',color:'white'}}>
             Event Title *
           </div>
-          <div style={{background:C.tealCard,padding:'14px 18px'}}>
+          <div style={{background:'#EFE6FA',padding:'14px 18px'}}>
             <FInput type="text" name="title" value={form.title} onChange={ch}
               placeholder="e.g. Crown Heights Community Food Drive"
               xStyle={{fontSize:20,fontWeight:700,padding:'12px 14px'}} />
@@ -555,14 +555,14 @@ export default function CreateEventPage() {
           {/* LEFT col */}
           <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
-            <Card accent={C.purple} bg={C.tealCard} title="About This Event">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="About This Event">
               <Field label="Description" mb={0}>
                 <FTextarea name="description" value={form.description} onChange={ch}
                   placeholder="Tell volunteers what to expect, what to bring, and any other details…" />
               </Field>
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Date & Time">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Date & Time">
               <Field label="Date">
                 <FInput type="date" name="date" value={form.date} onChange={ch} />
               </Field>
@@ -572,7 +572,7 @@ export default function CreateEventPage() {
               </div>
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Capacity">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Capacity">
               <Field label="Volunteer Limit" mb={0}>
                 <FInput type="number" name="volunteers" value={form.volunteers} onChange={ch}
                   min="1" placeholder="Leave blank for unlimited" />
@@ -584,7 +584,7 @@ export default function CreateEventPage() {
           {/* RIGHT col */}
           <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Location">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Location">
               <Field label="Address">
                 <div ref={suggestionWrapRef} style={{position:'relative'}}>
                   <FInput type="text" name="locationAddress" value={form.locationAddress}
@@ -665,14 +665,14 @@ export default function CreateEventPage() {
               </div>
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Flyer">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Flyer">
               <Field label="Flyer Language" mb={0}>
                 <Dropdown value={form.flyerLanguage} onChange={v=>setForm(p=>({...p,flyerLanguage:v}))}
                   placeholder="Select a language…" options={LANGUAGES} />
               </Field>
             </Card>
 
-            <Card accent={C.purple} bg={C.tealCard} title="Visibility">
+            <Card accent={C.purple} bg={'#EFE6FA'} title="Visibility">
               <div style={{display:'flex',gap:10,marginBottom:10}}>
                 {(['Public','Private'] as const).map(opt => {
                   const val = opt.toLowerCase() as 'public' | 'private';
