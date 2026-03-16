@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Map, { Marker } from "react-map-gl/maplibre";
+import { useState, useEffect, useMemo } from "react";
+import MapGL, { Marker } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -33,6 +33,18 @@ interface ResourceMapProps {
   initialZoom?: number;
 }
 
+function formatTime(t: string): string {
+  if (!t) return "";
+  // Full ISO: "2026-03-17T09:00:00" → take the time part
+  const timePart = t.includes("T") ? t.split("T")[1] : t;
+  const [hStr, mStr] = timePart.split(":");
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 export default function ResourceMap({
   height = 420,
   initialLng = -73.94,
@@ -47,6 +59,18 @@ export default function ResourceMap({
   const [loadingResource, setLoadingResource] = useState(false);
   const [selectedMarkerCoords, setSelectedMarkerCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventMarker | null>(null);
+  const [selectedEventGroup, setSelectedEventGroup] = useState<EventMarker[] | null>(null);
+
+  // Group events by location — events sharing the same lat/lng are clustered
+  const eventClusters = useMemo(() => {
+    const map = new Map<string, EventMarker[]>();
+    for (const ev of eventMarkers) {
+      const key = `${ev.lat.toFixed(5)},${ev.lng.toFixed(5)}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(ev);
+    }
+    return Array.from(map.values());
+  }, [eventMarkers]);
 
   // Load Lemontree resource markers within map bounds
   async function loadMarkers(bounds: { minLng: number; minLat: number; maxLng: number; maxLat: number }) {
@@ -78,6 +102,7 @@ export default function ResourceMap({
   // Fetch full resource detail when a marker is clicked
   async function handleMarkerClick(id: string, coords: { lat: number; lng: number }) {
     setSelectedEvent(null);
+    setSelectedEventGroup(null);
     setSelectedResource(null);
     setSelectedMarkerCoords(coords);
     setLoadingResource(true);
@@ -134,7 +159,7 @@ export default function ResourceMap({
   return (
     <div style={{ width: "100%" }}>
     <div style={{ position: "relative", width: "100%", height }}>
-      <Map
+      <MapGL
         mapLib={maplibregl}
         {...viewState}
         onMove={(e) => setViewState(e.viewState)}
@@ -164,26 +189,52 @@ export default function ResourceMap({
           </Marker>
         ))}
 
-        {/* Upcoming event markers */}
-        {eventMarkers.map((ev) => (
-          <Marker key={`event-${ev.id}`} longitude={ev.lng} latitude={ev.lat} anchor="center" style={{ zIndex: 10 }}>
-            <div
-              onClick={() => { setSelectedResource(null); setLoadingResource(false); setSelectedEvent(ev); }}
-              title={ev.title}
-              style={{
-                width: 22, height: 22, borderRadius: "50%",
-                border: "3px solid white",
-                background: "#22c55e",
-                boxShadow: "0 2px 8px rgba(34,197,94,0.7)",
-                cursor: "pointer", transition: "transform 0.15s",
-                zIndex: 10, position: "relative",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.6)")}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-            />
-          </Marker>
-        ))}
-      </Map>
+        {/* Upcoming event markers (clustered by location) */}
+        {eventClusters.map((group) => {
+          const { lat, lng } = group[0];
+          const isCluster = group.length > 1;
+          return (
+            <Marker key={`cluster-${lat}-${lng}`} longitude={lng} latitude={lat} anchor="center" style={{ zIndex: 10 }}>
+              <div
+                onClick={() => {
+                  setSelectedResource(null);
+                  setLoadingResource(false);
+                  if (isCluster) {
+                    setSelectedEvent(null);
+                    setSelectedEventGroup(group);
+                  } else {
+                    setSelectedEventGroup(null);
+                    setSelectedEvent(group[0]);
+                  }
+                }}
+                title={isCluster ? `${group.length} events at this location` : group[0].title}
+                style={{
+                  width: isCluster ? 30 : 22,
+                  height: isCluster ? 30 : 22,
+                  borderRadius: "50%",
+                  border: "3px solid white",
+                  background: "#22c55e",
+                  boxShadow: "0 2px 8px rgba(34,197,94,0.7)",
+                  cursor: "pointer",
+                  transition: "transform 0.15s",
+                  zIndex: 10,
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "white",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.4)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                {isCluster ? group.length : null}
+              </div>
+            </Marker>
+          );
+        })}
+      </MapGL>
 
       {/* Resource detail panel */}
       {(loadingResource || selectedResource) && (
@@ -265,6 +316,69 @@ export default function ResourceMap({
         </div>
       )}
 
+      {/* Event group panel (multiple events at same location) */}
+      {selectedEventGroup && (
+        <div style={{
+          position: "absolute", top: 16, right: 16, zIndex: 30,
+          width: 300, background: "white", borderRadius: 12,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.18)", padding: 20,
+          maxHeight: "80%", overflowY: "auto",
+        }}>
+          <button
+            onClick={() => setSelectedEventGroup(null)}
+            style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#666" }}
+          >✕</button>
+
+          <div style={{ marginBottom: 12 }}>
+            <span style={{
+              fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5,
+              padding: "2px 8px", borderRadius: 99, background: "#dcfce7", color: "#16a34a",
+            }}>
+              {selectedEventGroup.length} Events at this location
+            </span>
+          </div>
+
+          {selectedEventGroup[0].location_name && (
+            <p style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>
+              📍 {selectedEventGroup[0].location_name}
+            </p>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {selectedEventGroup.map((ev) => (
+              <div key={ev.id} style={{ borderTop: "1px solid #f0f0f0", paddingTop: 10 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a", marginBottom: 3 }}>{ev.title}</p>
+                <p style={{ fontSize: 12, color: "#666", marginBottom: 3 }}>
+                  📅 {new Date(ev.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  {" · "}🕐 {formatTime(ev.start_time)} – {formatTime(ev.end_time)}
+                </p>
+                <p style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+                  👥 {ev.current_signup_count}{ev.volunteer_limit ? ` / ${ev.volunteer_limit}` : ""} volunteers
+                </p>
+                <a href={`/events/${ev.id}`} style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                  View event →
+                </a>
+              </div>
+            ))}
+          </div>
+
+          <a
+            href={`/events/create?${new URLSearchParams({
+              ...(selectedEventGroup[0].location_name ? { location_name: selectedEventGroup[0].location_name } : {}),
+              lat: String(selectedEventGroup[0].lat),
+              lng: String(selectedEventGroup[0].lng),
+            }).toString()}`}
+            style={{
+              display: "inline-block", marginTop: 14, fontSize: 13, color: "white",
+              fontWeight: 600, background: "#2E8B7A", padding: "6px 14px",
+              borderRadius: 6, textDecoration: "none",
+            }}
+          >
+            + Create another event here
+          </a>
+        </div>
+      )}
+
       {/* Event detail panel */}
       {selectedEvent && (
         <div style={{
@@ -300,7 +414,7 @@ export default function ResourceMap({
           </p>
 
           <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
-            🕐 {selectedEvent.start_time.slice(0, 5)} – {selectedEvent.end_time.slice(0, 5)}
+            🕐 {formatTime(selectedEvent.start_time)} – {formatTime(selectedEvent.end_time)}
           </p>
 
           <p style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
@@ -308,16 +422,32 @@ export default function ResourceMap({
             {selectedEvent.volunteer_limit ? ` / ${selectedEvent.volunteer_limit}` : ""} volunteers
           </p>
 
-          <a href={`/events/${selectedEvent.id}`}
-            style={{ display: "inline-block", marginTop: 12, fontSize: 13, color: "#16a34a", fontWeight: 600 }}>
-            View event →
-          </a>
+          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+            <a href={`/events/${selectedEvent.id}`}
+              style={{ fontSize: 13, color: "#16a34a", fontWeight: 600 }}>
+              View event →
+            </a>
+            <a
+              href={`/events/create?${new URLSearchParams({
+                ...(selectedEvent.location_name ? { location_name: selectedEvent.location_name } : {}),
+                lat: String(selectedEvent.lat),
+                lng: String(selectedEvent.lng),
+              }).toString()}`}
+              style={{
+                fontSize: 13, color: "white", fontWeight: 600,
+                background: "#2E8B7A", padding: "6px 14px",
+                borderRadius: 6, textDecoration: "none",
+              }}
+            >
+              + Create event here
+            </a>
+          </div>
         </div>
       )}
     </div>
 
     {/* Legend */}
-    <div style={{ display: "flex", gap: 20, marginTop: 10, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 20, marginTop: 10, flexWrap: "wrap", padding: "4px 12px 8px" }}>
       {[
         { color: "#6942b5", label: "Food Pantry" },
         { color: "#E86F51", label: "Soup Kitchen" },
