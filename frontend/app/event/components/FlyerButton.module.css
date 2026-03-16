@@ -1,6 +1,5 @@
-@keyframes fillSweep {
-  from { clip-path: inset(0 100% 0 0); }
-  to   { clip-path: inset(0 0% 0 0); }
+@keyframes lt-spin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes shake {
@@ -13,7 +12,6 @@
 }
 
 .btn {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -23,9 +21,10 @@
   font-weight: 600;
   font-family: inherit;
   border-radius: var(--lt-radius-sm);
-  border: none;
+  border: 1.5px solid var(--lt-purple);
+  background: #fff;
+  color: var(--lt-purple);
   cursor: pointer;
-  overflow: hidden;
   white-space: nowrap;
   transition: background var(--lt-transition), transform var(--lt-transition), box-shadow var(--lt-transition);
 }
@@ -35,52 +34,39 @@
   opacity: 0.7;
 }
 
-/* Idle state */
 .idle {
-  background: var(--lt-purple);
-  color: #fff;
+  background: #fff;
+  color: var(--lt-purple);
 }
 
 .idle:hover:not(:disabled) {
-  background: var(--lt-purple-hover);
+  background: var(--lt-purple-light, #ede9f8);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(107, 70, 193, 0.3);
+  box-shadow: 0 4px 14px rgba(107, 70, 193, 0.15);
 }
 
-/* Loading state */
 .loading {
-  background: var(--lt-purple);
-  color: #fff;
+  background: #fff;
+  color: var(--lt-purple);
 }
 
-/* Registered state */
-.registered {
-  background: var(--lt-purple);
-  color: #fff;
-  animation: fillSweep 300ms ease-out both;
-}
-
-.registered:hover:not(:disabled) {
-  background: var(--lt-purple-hover);
-  transform: translateY(-1px);
-}
-
-/* Error state */
 .error {
-  background: var(--lt-error);
-  color: #fff;
+  background: var(--lt-error-bg, #fff0f0);
+  color: var(--lt-error, #e53e3e);
+  border-color: var(--lt-error, #e53e3e);
   animation: shake 400ms ease-in-out both;
+}
+
+.small {
+  padding: 6px 12px;
+  font-size: 13px;
 }
 
 .spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border: 2px solid rgba(107, 70, 193, 0.3);
+  border-top-color: var(--lt-purple);
   border-radius: 50%;
   animation: lt-spin 0.6s linear infinite;
-}
-
-@keyframes lt-spin {
-  to { transform: rotate(360deg); }
 }

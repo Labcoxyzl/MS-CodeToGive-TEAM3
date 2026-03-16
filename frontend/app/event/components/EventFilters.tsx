@@ -4,8 +4,6 @@ import { useRef } from "react";
 import type { FilterState } from "@/app/types/event";
 import styles from "../events.module.css";
 
-const BOROUGHS = ["all", "Brooklyn", "Manhattan", "Queens", "Bronx", "Staten Island", "Other"];
-
 interface Props {
   filters: FilterState;
   onChange: (partial: Partial<FilterState>) => void;
@@ -23,7 +21,7 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
   }
 
   const hasActiveFilters =
-    filters.q || (filters.borough && filters.borough !== "all") || filters.dateRange || filters.tab === "registered";
+    filters.q || filters.dateRange || filters.tab === "registered";
 
   return (
     <div className={styles.filters}>
@@ -39,21 +37,6 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
           aria-label="Search events"
         />
       </div>
-
-      {/* Borough dropdown */}
-      <select
-        className={styles.filterSelect}
-        value={filters.borough || "all"}
-        onChange={(e) => onChange({ borough: e.target.value })}
-        aria-label="Filter by borough"
-      >
-        <option value="all">All Boroughs</option>
-        {BOROUGHS.filter((b) => b !== "all").map((b) => (
-          <option key={b} value={b}>
-            {b}
-          </option>
-        ))}
-      </select>
 
       {/* Date range dropdown */}
       <select

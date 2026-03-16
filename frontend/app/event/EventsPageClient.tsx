@@ -65,7 +65,6 @@ export default function EventsPageClient() {
   const filters: FilterState = useMemo(
     () => ({
       q: searchParams.get("q") ?? "",
-      borough: searchParams.get("borough") ?? "",
       dateRange: searchParams.get("date") ?? "",
       tab: searchParams.get("tab") ?? "",
     }),
@@ -81,13 +80,6 @@ export default function EventsPageClient() {
           params.set("q", partial.q);
         } else {
           params.delete("q");
-        }
-      }
-      if (partial.borough !== undefined) {
-        if (partial.borough && partial.borough !== "all") {
-          params.set("borough", partial.borough);
-        } else {
-          params.delete("borough");
         }
       }
       if (partial.dateRange !== undefined) {
@@ -176,6 +168,12 @@ export default function EventsPageClient() {
               Browse upcoming volunteer flyering campaigns in your area.
             </p>
           </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/mariah-testimonial.svg"
+            alt="Volunteer testimonial"
+            className={styles.heroBandTestimonial}
+          />
           <div className={styles.heroBandActions}>
             <Link href="/events/create" className={styles.newEventBtn}>
               + New Event

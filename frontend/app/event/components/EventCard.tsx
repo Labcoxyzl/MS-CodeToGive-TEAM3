@@ -1,9 +1,14 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
+import { Map, Marker } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { Event } from "@/app/types/event";
 import { eventGradient } from "../utils/eventGradient";
 import { highlightText } from "../utils/eventFilters";
 import RegisterButton from "./RegisterButton";
+import FlyerButton from "./FlyerButton";
 import styles from "./EventCard.module.css";
 
 interface Props {
@@ -26,6 +31,21 @@ export default function EventCard({
   isLoadingId,
 }: Props) {
   const gradient = eventGradient(event.title);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const hasCoords = Boolean(event.latitude && event.longitude);
   const isFull =
     event.volunteerLimit != null && event.registeredCount >= event.volunteerLimit;
 
@@ -41,17 +61,34 @@ export default function EventCard({
       className={styles.card}
       style={{ "--card-index": cardIndex } as React.CSSProperties}
     >
-      <div className={styles.imageWrapper}>
-        {event.coverImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={event.coverImageUrl} alt={event.title} className={styles.image} />
+      <div ref={containerRef} className={styles.imageWrapper}>
+        {hasCoords && isVisible ? (
+          <div className={styles.mapContainer}>
+            <Map
+              mapLib={maplibregl}
+              initialViewState={{ longitude: event.longitude!, latitude: event.latitude!, zoom: 15 }}
+              style={{ width: "100%", height: "100%" }}
+              mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+              interactive={false}
+              attributionControl={false}
+            >
+              <Marker longitude={event.longitude!} latitude={event.latitude!}>
+                <div style={{
+                  width: 12, height: 12,
+                  background: "#2E8B7A",
+                  borderRadius: "50%",
+                  border: "2px solid #fff",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+                }} />
+              </Marker>
+            </Map>
+          </div>
         ) : (
           <div
             className={styles.imagePlaceholder}
             style={{ background: gradient }}
           />
         )}
-        <span className={styles.boroughPill}>{event.borough}</span>
         {isPast && <span className={styles.pastBadge}>Past</span>}
       </div>
 
@@ -84,7 +121,10 @@ export default function EventCard({
           </span>
 
           {!isPast && (
-            <div className={styles.registerWrap}>
+            <div className={styles.hoverActions}>
+              {event.latitude && event.longitude && (
+                <FlyerButton eventId={event.id} small />
+              )}
               <RegisterButton
                 eventId={event.id}
                 isRegistered={event.isRegistered}

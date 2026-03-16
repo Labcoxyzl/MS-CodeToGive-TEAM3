@@ -31,6 +31,8 @@ export interface Event {
   date: string;
   startTime: string;
   endTime: string;
+  latitude?: number | null;
+  longitude?: number | null;
   coverImageUrl?: string;
   volunteerLimit?: number;
   registeredCount: number;
@@ -43,7 +45,6 @@ export interface Event {
 
 export interface FilterState {
   q: string;
-  borough: string;
   dateRange: string;
   tab: string;
 }

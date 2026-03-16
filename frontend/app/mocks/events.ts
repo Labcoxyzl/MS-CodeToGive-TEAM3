@@ -9,6 +9,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Help distribute food pantry flyers across Crown Heights. We'll cover Nostrand Ave and Franklin Ave corridors.",
     location: "Crown Heights, Brooklyn",
+    latitude: 40.6693,
+    longitude: -73.9499,
     borough: "Brooklyn",
     date: "2026-03-08",
     startTime: "10:00 AM",
@@ -27,6 +29,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Weekend flyering push near Bronx River Ave. Focus on SNAP enrollment info for families.",
     location: "Bronx River Ave, Bronx",
+    latitude: 40.8261,
+    longitude: -73.8789,
     borough: "Bronx",
     date: "2026-03-10",
     startTime: "9:00 AM",
@@ -47,6 +51,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Join us on 125th Street to inform Harlem residents about SNAP benefits and nearby food resources.",
     location: "125th St & Lenox Ave, Manhattan",
+    latitude: 40.8076,
+    longitude: -73.9461,
     borough: "Manhattan",
     date: "2026-03-16",
     startTime: "11:00 AM",
@@ -65,6 +71,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Distribute multilingual flyers near Flushing Meadows Park covering pantry locations across Queens.",
     location: "Flushing Meadows–Corona Park, Queens",
+    latitude: 40.7282,
+    longitude: -73.8455,
     borough: "Queens",
     date: "2026-03-18",
     startTime: "10:30 AM",
@@ -83,6 +91,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Catch commuters at the ferry terminal with flyers about Lemontree food assistance programs.",
     location: "St. George Ferry Terminal, Staten Island",
+    latitude: 40.6437,
+    longitude: -74.0736,
     borough: "Staten Island",
     date: "2026-03-20",
     startTime: "7:30 AM",
@@ -103,6 +113,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Walk through Bed-Stuy distributing flyers about local food pantry schedules and SNAP sign-up events.",
     location: "Malcolm X Blvd, Brooklyn",
+    latitude: 40.6830,
+    longitude: -73.9442,
     borough: "Brooklyn",
     date: "2026-03-25",
     startTime: "10:00 AM",
@@ -121,6 +133,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Support a nutrition fair at Morrisania. Volunteers will hand out flyers before and during the event.",
     location: "Morrisania Air Rights, Bronx",
+    latitude: 40.8293,
+    longitude: -73.9175,
     borough: "Bronx",
     date: "2026-03-28",
     startTime: "9:00 AM",
@@ -139,6 +153,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Cover Jackson Heights and Elmhurst with bilingual flyers on food access programs. Great for new volunteers!",
     location: "74th St & Roosevelt Ave, Queens",
+    latitude: 40.7463,
+    longitude: -73.8963,
     borough: "Queens",
     date: "2026-04-05",
     startTime: "11:00 AM",
@@ -157,6 +173,8 @@ export const MOCK_EVENTS: Event[] = [
     description:
       "Launch event for a new pantry partnership in upper Manhattan. Help us spread the word door-to-door.",
     location: "Inwood Hill Park, Manhattan",
+    latitude: 40.8677,
+    longitude: -73.9291,
     borough: "Manhattan",
     date: "2026-04-12",
     startTime: "10:00 AM",

@@ -23,6 +23,7 @@
   transition: height 0.3s ease;
   overflow: hidden;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
 }
 
 .heroBandCollapsed {
@@ -37,13 +38,13 @@
   font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
   font-size: 28px;
   font-weight: 700;
-  color: var(--lt-text-primary);
+  color: #fff;
   margin: 0 0 6px;
 }
 
 .heroBandSubline {
   font-size: 15px;
-  color: var(--lt-text-secondary);
+  color: #fff;
   margin: 0;
   transition: opacity 0.2s;
 }
@@ -70,20 +71,20 @@
   border: none;
   cursor: pointer;
   text-decoration: none;
-  background: var(--lt-teal);
+  background: var(--lt-purple);
   color: #fff;
   transition: all var(--lt-transition);
 }
 
 .newEventBtn:hover {
-  background: var(--lt-teal-hover);
+  background: var(--lt-purple-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(46, 139, 122, 0.3);
+  box-shadow: 0 4px 14px rgba(107, 70, 193, 0.3);
 }
 
 /* ── Filter Bar ──────────────────────────────────────────────── */
 .filterBar {
-  background: var(--lt-card-bg-white);
+  background: var(--lt-yellow);
   border-bottom: 1px solid var(--lt-border);
   padding: 12px 40px;
 }
@@ -131,7 +132,7 @@
 
 .searchInput:focus {
   border-color: var(--lt-border-focus);
-  box-shadow: 0 0 0 3px var(--lt-teal-light);
+  box-shadow: 0 0 0 3px var(--lt-purple-light);
 }
 
 .filterSelect {
@@ -153,7 +154,7 @@
 
 .filterSelect:focus {
   border-color: var(--lt-border-focus);
-  box-shadow: 0 0 0 3px var(--lt-teal-light);
+  box-shadow: 0 0 0 3px var(--lt-purple-light);
 }
 
 .chips {
@@ -175,14 +176,14 @@
 }
 
 .chip:hover {
-  border-color: var(--lt-teal);
-  color: var(--lt-teal);
+  border-color: var(--lt-purple);
+  color: var(--lt-purple);
 }
 
 .chipActive {
-  background: var(--lt-teal-light);
-  border-color: var(--lt-teal);
-  color: var(--lt-teal);
+  background: var(--lt-purple-light);
+  border-color: var(--lt-purple);
+  color: var(--lt-purple);
   font-weight: 600;
 }
 
@@ -310,7 +311,7 @@
   height: 36px;
   border-radius: 50%;
   border: none;
-  background: var(--lt-teal);
+  background: var(--lt-purple);
   color: #fff;
   font-size: 20px;
   line-height: 1;
@@ -329,7 +330,7 @@
 
 .arrowBtn:hover {
   transform: translateY(-50%) scale(1.1);
-  background: var(--lt-teal-hover);
+  background: var(--lt-purple-hover);
 }
 
 .arrowBtnLeft {
@@ -383,16 +384,16 @@
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
-  background: var(--lt-teal-light);
+  background: var(--lt-purple-light);
   border: none;
   border-radius: var(--lt-radius-full);
-  color: var(--lt-teal);
+  color: var(--lt-purple);
   cursor: pointer;
   transition: all var(--lt-transition);
 }
 
 .emptyStateClear:hover {
-  background: var(--lt-teal);
+  background: var(--lt-purple);
   color: #fff;
 }
 
@@ -417,7 +418,7 @@
   right: 20px;
   z-index: 60;
   padding: 10px 20px;
-  background: var(--lt-teal);
+  background: var(--lt-purple);
   color: #fff;
   border: none;
   border-radius: var(--lt-radius-full);
@@ -513,6 +514,22 @@
   .sectionHeader {
     margin: 16px 0 10px;
   }
+}
+
+/* ── Hero Band Testimonial Image ─────────────────────────────── */
+.heroBandTestimonial {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  height: 140px;
+  width: auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+@media (max-width: 767px) {
+  .heroBandTestimonial { display: none; }
 }
 
 /* ── Search Highlight ────────────────────────────────────────── */

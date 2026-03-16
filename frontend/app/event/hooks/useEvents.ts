@@ -43,6 +43,8 @@ function mapApiEvent(api: ApiEvent, joinedIds: Set<string>): Event {
     date: api.date,
     startTime: formatTime(api.start_time),
     endTime: formatTime(api.end_time),
+    latitude: api.latitude,
+    longitude: api.longitude,
     coverImageUrl: undefined,
     volunteerLimit: api.volunteer_limit ?? undefined,
     registeredCount: api.current_signup_count,

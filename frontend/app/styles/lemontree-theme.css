@@ -368,7 +368,7 @@
 .lt-sidebar {
   width: 240px;
   min-height: 100vh;
-  background: var(--lt-card-bg-white);
+  background: var(--lt-bg);
   border-right: 1px solid var(--lt-border);
   padding: 24px 0;
   display: flex;

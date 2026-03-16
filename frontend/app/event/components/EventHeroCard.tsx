@@ -1,5 +1,9 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
+import { Map, Marker } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import type { Event } from "@/app/types/event";
 import { eventGradient } from "../utils/eventGradient";
 import RegisterButton from "./RegisterButton";
@@ -14,9 +18,21 @@ interface Props {
 
 export default function EventHeroCard({ event, onRegister, onCancel, isLoadingId }: Props) {
   const gradient = eventGradient(event.title);
-  const bgStyle = event.coverImageUrl
-    ? { backgroundImage: `url(${event.coverImageUrl})` }
-    : { ["--event-gradient" as string]: gradient, background: "var(--event-gradient)" };
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setIsVisible(true); },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const hasCoords = Boolean(event.latitude && event.longitude);
 
   const dateDisplay = (() => {
     const d = new Date(event.date + "T00:00:00");
@@ -24,13 +40,38 @@ export default function EventHeroCard({ event, onRegister, onCancel, isLoadingId
   })();
 
   return (
-    <div className={styles.hero}>
-      <div className={styles.bg} style={bgStyle} />
+    <div ref={containerRef} className={styles.hero}>
+      {hasCoords && isVisible ? (
+        <div className={styles.mapBg}>
+          <Map
+            mapLib={maplibregl}
+            initialViewState={{ longitude: event.longitude!, latitude: event.latitude!, zoom: 15 }}
+            style={{ width: "100%", height: "100%" }}
+            mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+            interactive={false}
+            attributionControl={false}
+          >
+            <Marker longitude={event.longitude!} latitude={event.latitude!}>
+              <div style={{
+                width: 14, height: 14,
+                background: "#2E8B7A",
+                borderRadius: "50%",
+                border: "2px solid #fff",
+                boxShadow: "0 1px 6px rgba(0,0,0,0.45)",
+              }} />
+            </Marker>
+          </Map>
+        </div>
+      ) : (
+        <div
+          className={styles.bg}
+          style={{ ["--event-gradient" as string]: gradient, background: "var(--event-gradient)" }}
+        />
+      )}
       <div className={styles.overlay} />
 
       <div className={styles.chips}>
         <span className={styles.featuredBadge}>Featured</span>
-        <span className={styles.chip}>{event.borough}</span>
         <span className={styles.chip}>{dateDisplay}</span>
       </div>
 

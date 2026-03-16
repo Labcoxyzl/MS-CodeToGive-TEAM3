@@ -32,11 +32,6 @@ export function filterEvents(events: Event[], filters: FilterState): Event[] {
       if (!inTitle && !inLocation && !inDescription) return false;
     }
 
-    // Borough filter
-    if (filters.borough && filters.borough !== "all") {
-      if (ev.borough.toLowerCase() !== filters.borough.toLowerCase()) return false;
-    }
-
     // Date range filter
     if (filters.dateRange === "week" && !isThisWeek(ev.date)) return false;
     if (filters.dateRange === "month" && !isThisMonth(ev.date)) return false;
