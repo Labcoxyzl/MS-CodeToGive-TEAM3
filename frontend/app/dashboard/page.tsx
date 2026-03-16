@@ -215,16 +215,16 @@ export default function DashboardPage() {
               />
             </span>
           </Link>
-          <div className={styles.topBarUser}>
+          <Link href="/profile" className={styles.topBarUser} style={{ textDecoration: "none", color: "inherit" }}>
             {loading ? (
               <div className="lt-spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--lt-color-brand-primary)' }} />
             ) : (
               <>
-                <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)" }}>{userState.initials}</div>
+                <div className="lt-avatar" style={{ border: "2px solid rgba(0,0,0,0.1)", cursor: "pointer" }}>{userState.initials}</div>
                 <span>{userState.name}</span>
               </>
             )}
-          </div>
+          </Link>
         </div>
 
         {/* ── Main Content ────────────────────────────────── */}
@@ -248,22 +248,22 @@ export default function DashboardPage() {
               {/* Stats Cards */}
               <div className={styles.statsRow}>
                 <StatsCard
-                  icon="✅"
+                  icon={<Image src="/handForDarkBackground.svg" alt="Events Attended" width={28} height={28} />}
                   value={stats.eventsAttended}
                   label="Events Attended"
-                  colorClass="lt-stat-card__icon--teal"
+                  colorClass="lt-stat-card__icon--purple-mid"
                 />
                 <StatsCard
-                  icon="📅"
+                  icon={<Image src="/vegetables.png" alt="Upcoming Events" width={28} height={28} />}
                   value={stats.upcomingEvents}
                   label="Upcoming Events"
-                  colorClass="lt-stat-card__icon--purple"
+                  colorClass="lt-stat-card__icon--purple-mid"
                 />
                 <StatsCard
-                  icon="⭐"
+                  icon={<Image src="/coin.png" alt="Points Earned" width={28} height={28} />}
                   value={stats.pointsEarned}
                   label="Points Earned"
-                  colorClass="lt-stat-card__icon--coral"
+                  colorClass="lt-stat-card__icon--purple-mid"
                 />
               </div>
 

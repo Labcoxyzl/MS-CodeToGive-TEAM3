@@ -367,7 +367,10 @@
 /* ── Sidebar ──────────────────────────────────────────────────── */
 .lt-sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
   background: var(--lt-bg);
   border-right: 1px solid var(--lt-border);
   padding: 24px 0;
@@ -463,10 +466,11 @@
   font-size: 20px;
 }
 
-.lt-stat-card__icon--yellow { background: var(--lt-yellow-light); }
-.lt-stat-card__icon--teal   { background: var(--lt-teal-light); }
-.lt-stat-card__icon--purple { background: var(--lt-purple-light); }
-.lt-stat-card__icon--coral  { background: #FDDDD6; }
+.lt-stat-card__icon--yellow       { background: var(--lt-yellow-light); }
+.lt-stat-card__icon--teal         { background: var(--lt-teal-light); }
+.lt-stat-card__icon--purple       { background: var(--lt-purple-light); }
+.lt-stat-card__icon--purple-mid   { background: #C4A8E8; }
+.lt-stat-card__icon--coral        { background: #FDDDD6; }
 
 .lt-stat-card__value {
   font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
