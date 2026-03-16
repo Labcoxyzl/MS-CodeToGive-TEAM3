@@ -36,6 +36,11 @@ export function filterEvents(events: Event[], filters: FilterState, currentUserI
     // Date range filter
     if (filters.dateRange === "week" && !isThisWeek(ev.date)) return false;
     if (filters.dateRange === "month" && !isThisMonth(ev.date)) return false;
+    if (filters.dateRange?.includes(":")) {
+      const [from, to] = filters.dateRange.split(":");
+      if (from && ev.date < from) return false;
+      if (to && ev.date > to) return false;
+    }
 
     return true;
   });

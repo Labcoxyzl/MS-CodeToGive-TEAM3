@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import type { FilterState } from "@/app/types/event";
 import styles from "../events.module.css";
+import DateRangePicker from "./DateRangePicker";
 
 interface Props {
   filters: FilterState;
@@ -10,16 +11,30 @@ interface Props {
   onClear: () => void;
 }
 
-const DATE_OPTIONS = [
+const PRESETS = [
   { value: "", label: "Any Date" },
   { value: "week", label: "This Week" },
   { value: "month", label: "This Month" },
 ];
 
+function isCustomRange(v: string) {
+  return v.includes(":");
+}
+
+function parseCustomRange(v: string): { from: string; to: string } {
+  const [from = "", to = ""] = v.split(":");
+  return { from, to };
+}
+
 export default function EventFilters({ filters, onChange, onClear }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
+
+  const isCustom = isCustomRange(filters.dateRange);
+  const { from: customFrom, to: customTo } = isCustom
+    ? parseCustomRange(filters.dateRange)
+    : { from: "", to: "" };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -33,10 +48,35 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
 
   function handleSearch(value: string) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onChange({ q: value });
-    }, 200);
+    debounceRef.current = setTimeout(() => onChange({ q: value }), 200);
   }
+
+  function selectPreset(value: string) {
+    onChange({ dateRange: value });
+    setDateDropdownOpen(false);
+  }
+
+  function handleRangeChange({ from, to }: { from: string; to: string }) {
+    if (!from && !to) {
+      onChange({ dateRange: "" });
+    } else {
+      onChange({ dateRange: `${from}:${to}` });
+    }
+  }
+
+  const buttonLabel = (() => {
+    if (!filters.dateRange) return "Any Date";
+    if (filters.dateRange === "week") return "This Week";
+    if (filters.dateRange === "month") return "This Month";
+    if (isCustom) {
+      const { from, to } = parseCustomRange(filters.dateRange);
+      if (from && to && from === to) return from;
+      if (from && to) return `${from} – ${to}`;
+      if (from) return `From ${from}`;
+      if (to) return `Until ${to}`;
+    }
+    return "Any Date";
+  })();
 
   const hasActiveFilters =
     filters.q || filters.dateRange || filters.tab === "registered" || filters.tab === "my-events";
@@ -46,6 +86,8 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
     { value: "registered", label: "Registered" },
     { value: "my-events", label: "My Events" },
   ];
+
+  const activePreset = isCustom ? "__custom__" : (filters.dateRange || "");
 
   return (
     <div className={styles.filters}>
@@ -69,24 +111,95 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
           className="lt-select"
           onClick={() => setDateDropdownOpen((o) => !o)}
           aria-label="Filter by date range"
-          style={{ textAlign: "left", minWidth: 120, color: filters.dateRange ? "inherit" : "var(--lt-text-muted)" }}
+          style={{
+            textAlign: "left",
+            minWidth: 148,
+            color: filters.dateRange ? "inherit" : "var(--lt-text-muted)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
         >
-          {DATE_OPTIONS.find((o) => o.value === (filters.dateRange || ""))?.label ?? "Any Date"}
+          <span style={{ flex: 1 }}>{buttonLabel}</span>
+          <span style={{ opacity: 0.45, fontSize: 11, flexShrink: 0 }}>▾</span>
         </button>
+
         {dateDropdownOpen && (
-          <div className="lt-select-dropdown" style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 20, background: "#fff", border: "1.5px solid var(--lt-border)", borderRadius: "var(--lt-radius-sm)", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", marginTop: 4 }}>
-            {DATE_OPTIONS.map((opt) => (
-              <div
-                key={opt.value}
-                className="lt-select-option"
-                onClick={() => { onChange({ dateRange: opt.value }); setDateDropdownOpen(false); }}
-                style={{ padding: "10px 14px", fontSize: 14, cursor: "pointer", background: (filters.dateRange || "") === opt.value ? "var(--lt-teal-light)" : "transparent", color: (filters.dateRange || "") === opt.value ? "var(--lt-teal)" : "var(--lt-text-primary)", fontWeight: (filters.dateRange || "") === opt.value ? 600 : "normal" }}
-                onMouseEnter={(e) => { if ((filters.dateRange || "") !== opt.value) e.currentTarget.style.background = "var(--lt-card-bg-muted)"; }}
-                onMouseLeave={(e) => { if ((filters.dateRange || "") !== opt.value) e.currentTarget.style.background = "transparent"; }}
-              >
-                {opt.label}
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: 0,
+              zIndex: 20,
+              width: 240,
+              background: "#fff",
+              border: "1.5px solid var(--lt-border)",
+              borderRadius: "var(--lt-radius-sm)",
+              boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Preset chips */}
+            <div style={{ display: "flex", gap: 6, padding: "10px 14px 6px" }}>
+              {PRESETS.map((opt) => {
+                const active = activePreset === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => selectPreset(opt.value)}
+                    style={{
+                      flex: 1,
+                      padding: "5px 0",
+                      fontSize: 12,
+                      fontWeight: active ? 700 : 500,
+                      fontFamily: "var(--font-dm-sans)",
+                      borderRadius: 99,
+                      border: `1.5px solid ${active ? "var(--lt-color-brand-primary)" : "var(--lt-border)"}`,
+                      background: active ? "var(--lt-teal-light)" : "transparent",
+                      color: active ? "var(--lt-teal)" : "var(--lt-text-secondary)",
+                      cursor: "pointer",
+                      transition: "all 0.12s",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Divider with label */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 14px" }}>
+              <div style={{ flex: 1, height: 1, background: "var(--lt-border)" }} />
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--lt-text-muted)" }}>
+                Custom
+              </span>
+              <div style={{ flex: 1, height: 1, background: "var(--lt-border)" }} />
+            </div>
+
+            {/* Calendar */}
+            <DateRangePicker
+              from={customFrom}
+              to={customTo}
+              onChange={handleRangeChange}
+            />
+
+            {/* Clear custom range */}
+            {isCustom && (customFrom || customTo) && (
+              <div style={{ padding: "0 14px 10px", textAlign: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => { onChange({ dateRange: "" }); setDateDropdownOpen(false); }}
+                  style={{
+                    fontSize: 12, color: "var(--lt-text-muted)", background: "none",
+                    border: "none", cursor: "pointer", textDecoration: "underline",
+                    fontFamily: "var(--font-dm-sans)",
+                  }}
+                >
+                  Clear range
+                </button>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
@@ -104,7 +217,7 @@ export default function EventFilters({ filters, onChange, onClear }: Props) {
         ))}
       </div>
 
-      {/* Clear button */}
+      {/* Clear all */}
       {hasActiveFilters && (
         <button className={styles.clearBtn} onClick={onClear}>
           Clear
