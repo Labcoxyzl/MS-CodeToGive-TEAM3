@@ -1,0 +1,86 @@
+@keyframes fillSweep {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+@keyframes shake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-4px); }
+  40%  { transform: translateX(4px); }
+  60%  { transform: translateX(-4px); }
+  80%  { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: var(--lt-radius-sm);
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: background var(--lt-transition), transform var(--lt-transition), box-shadow var(--lt-transition);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Idle state */
+.idle {
+  background: var(--lt-teal);
+  color: #fff;
+}
+
+.idle:hover:not(:disabled) {
+  background: var(--lt-teal-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(46, 139, 122, 0.3);
+}
+
+/* Loading state */
+.loading {
+  background: var(--lt-teal);
+  color: #fff;
+}
+
+/* Registered state */
+.registered {
+  background: var(--lt-purple);
+  color: #fff;
+  animation: fillSweep 300ms ease-out both;
+}
+
+.registered:hover:not(:disabled) {
+  background: var(--lt-purple-hover);
+  transform: translateY(-1px);
+}
+
+/* Error state */
+.error {
+  background: var(--lt-error);
+  color: #fff;
+  animation: shake 400ms ease-in-out both;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: lt-spin 0.6s linear infinite;
+}
+
+@keyframes lt-spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,54 @@
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: var(--lt-card-bg-white);
+  border: 1px solid var(--lt-border);
+  border-radius: var(--lt-radius-lg);
+  overflow: hidden;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0ece4 25%, #faf6ee 50%, #f0ece4 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+.imageArea {
+  height: 160px;
+  composes: shimmer;
+}
+
+.body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.line {
+  height: 14px;
+  border-radius: 6px;
+  composes: shimmer;
+}
+
+.lineShort {
+  width: 60%;
+  height: 12px;
+  border-radius: 6px;
+  composes: shimmer;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
