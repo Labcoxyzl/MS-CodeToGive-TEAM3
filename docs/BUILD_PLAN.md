@@ -1,30 +1,30 @@
 ---
 name: Lemontree Volunteer Platform
-overview: A full-stack build plan for the Lemontree nonprofit volunteer outreach platform covering system architecture, data model, API design, user flows, and phased implementation roadmap across Next.js frontend and FastAPI backend with Supabase Postgres. Integrates the Lemontree Data API (platform.foodhelpline.org) for live food resource data and flyer PDF generation.
+overview: A full-stack build plan for the Lemontree nonprofit volunteer outreach platform covering system architecture, data model, API design, user flows, and phased implementation roadmap across Next.js frontend and FastAPI backend with Supabase Postgres. Integrates the Lemontree Data API (platform.foodhelpline.org) for live food resource data. Flyer generation uses custom Jinja2 + WeasyPrint pipeline.
 todos:
   - id: phase-0
     content: "Phase 0: Project scaffolding -- GitHub repo, Next.js init, FastAPI init, Supabase setup, env config"
-    status: pending
+    status: completed
   - id: phase-1
-    content: "Phase 1: Auth + Onboarding -- Google OAuth, email/password, JWT, onboarding form, profile page"
-    status: pending
+    content: "Phase 1: Auth + Onboarding -- Email/password via Supabase Auth, JWT, profile page"
+    status: completed
   - id: phase-2
-    content: "Phase 2: Event Creation (PRIORITY) -- Event CRUD API, multi-step form, Mapbox location picker, Lemontree API resource integration, shareable links"
-    status: pending
+    content: "Phase 2: Event Creation -- Event CRUD API, multi-step form, MapLibre location picker, Lemontree API markers, shareable links"
+    status: completed
   - id: phase-3
-    content: "Phase 3: Event Signup + Share Flow -- Auth signup, guest signup, event signup QR code generation, signup landing page, referral tracking"
-    status: pending
+    content: "Phase 3: Event Signup + Share Flow -- Auth signup, guest signup, event signup QR, referral tracking (signup on event detail)"
+    status: completed
   - id: phase-4
-    content: "Phase 4: Flyer Generation -- Fetch PDF from Lemontree API (/api/resources.pdf), cache in Supabase Storage, event signup QR, preview/download UI"
-    status: pending
+    content: "Phase 4: Flyer Generation -- Custom Jinja2 + WeasyPrint PDF, Lemontree markers, event signup QR, on-demand generation"
+    status: completed
   - id: phase-5
-    content: "Phase 5: Dashboard + Event Management -- Dashboard, event listing, event management (leader), photo upload, messaging, event history"
-    status: pending
+    content: "Phase 5: Dashboard + Event Management -- Dashboard, event listing, event management (leader), photo upload, messaging"
+    status: completed
   - id: phase-6
-    content: "Phase 6: Points + Leaderboard (post-MVP) -- Points transactions, leaderboard API, community leaders page"
-    status: pending
+    content: "Phase 6: Points + Leaderboard -- Points transactions, leaderboard API, community leaders page"
+    status: completed
   - id: phase-7
-    content: "Phase 7: Heatmap + Polish (post-MVP) -- Geographic heatmap, landing/about pages polish, responsive pass, error handling"
+    content: "Phase 7: Heatmap + Polish (post-MVP) -- Geographic heatmap, about page, responsive pass, error handling"
     status: pending
 isProject: false
 ---
@@ -46,6 +46,15 @@ isProject: false
 
 **Product Goal:** A self-serve platform where volunteers can create flyering events, pull branded flyers from the Lemontree Data API (with nearby food resource info and QR codes), recruit other volunteers, and track collective impact -- all with minimal Lemontree staff involvement.
 
+**Implementation Status (as of March 2026):**
+
+Phases 0–6 are implemented. Key implementation details:
+- **Auth:** Email/password via Supabase Auth (no Google OAuth)
+- **Maps:** MapLibre GL JS + Lemontree `markersWithinBounds`; OpenStreetMap/CartoDB tiles
+- **Flyer:** Custom Jinja2 + WeasyPrint (not Lemontree `/api/resources.pdf`); 8 languages
+- **API:** All routes under `/api/v1` prefix
+- **Share links:** Format `/events/{10-char-hex}`; resolvable via `/api/v1/events/share/{token}`
+
 **MVP vs Later-Phase Split:**
 
 
@@ -66,17 +75,17 @@ isProject: false
 
 **Assumptions (labeled):**
 
-- **[A1]** Google OAuth is the primary login; email/password is secondary. No phone-based OTP for MVP.
-- **[A2]** Flyer generation uses the **Lemontree Data API** (`GET /api/resources.pdf`) which returns a branded PDF listing up to 4 nearby food resources with a QR code linking to foodhelpline.org. No custom template rendering needed for MVP.
+- **[A1]** Email/password auth via Supabase Auth. No Google OAuth in current implementation. No phone-based OTP for MVP.
+- **[A2]** Flyer generation uses a **custom Jinja2 + WeasyPrint pipeline** (not Lemontree `/api/resources.pdf`). Flyer includes event details, nearby resource markers from Lemontree `markersWithinBounds`, static map, and event signup QR code.
 - **[A3]** "Pantry mode" means the event targets food pantry/soup kitchen locations. The **Lemontree Data API** (`GET /api/resources`) provides live food resource data (pantries, soup kitchens) with location, schedules, and contact info. No static seed data needed.
 - **[A4]** Guest signup (no account) captures name + email + phone only. Guests can later convert to full accounts.
 - **[A5]** Points system is post-MVP. MVP tracks attendance only.
 - **[A6]** Heatmap is post-MVP. MVP stores lat/lng on events which enables later heatmap derivation.
 - **[A7]** SMS/email notifications are out of MVP scope; in-app messaging only for event leaders.
-- **[A8]** Flyer customization for MVP is limited to language (`en` / `es`) and location name -- both supported by the Lemontree API's `flyerLang` and `locationName` parameters.
+- **[A8]** Flyer supports 8 languages: `en`, `es`, `fr`, `pt`, `it`, `pl`, `ht`, `tl`. Location name from event or reverse geocoding.
 - **[A9]** "Community Leaders" page is a public leaderboard of top event leaders by events organized / volunteers mobilized.
 - **[A10]** The Lemontree Data API is public, requires no auth, and is CORS-enabled. Responses use `superjson` serialization (see Section 9.5 for details). The API is internal and may change without notice.
-- **[A11]** There are two distinct "documents" per event: (1) **Resource Flyer** -- the PDF volunteers distribute to community members (generated via Lemontree API), and (2) **Event Signup QR/Link** -- the shareable link/QR for recruiting other volunteers to the event.
+- **[A11]** The current flyer is a **volunteer recruitment flyer** combining event details, nearby resource markers, and an event signup QR. The shareable link format is `/events/{token}` (10-char hex token), resolvable via `GET /api/v1/events/share/{token}`.
 
 **Open Questions (need product owner input):**
 
@@ -140,7 +149,7 @@ Admin             | Yes         | All         | All         | All         | Yes 
 
 *Promoter is an optional tag, not a separate auth role. Any user can share an event link. Referral tracking attributes signups to the sharer.
 
-**Implementation:** Store `role` as an enum on the user: `volunteer | admin`. Track `is_event_leader` dynamically (any user who creates an event becomes leader of that event). Promoter tracking via `referral_code` on share links.
+**Implementation:** Store `role` as an enum on the user: `volunteer | leader | promoter | admin`. Event leaders are users who create events. Promoter tracking via `referral_code` on share links.
 
 ---
 
@@ -263,7 +272,7 @@ flowchart TD
 **Steps:**
 
 1. Triggered on event creation or when leader requests regeneration
-2. Backend calls `GET https://platform.foodhelpline.org/api/resources.pdf?lat={event.lat}&lng={event.lng}&locationName={event.location_name}&flyerLang={event.flyer_language}&ref={event.id}`
+2. Backend generates PDF via custom Jinja2 + WeasyPrint pipeline (see Section 10 Key Flows)
 3. If 200: PDF stream saved to Supabase Storage bucket `flyers/{event_id}/`; URL saved to `events.flyer_url`
 4. If 422 (out of service area): event marked as having no nearby resources; leader notified
 5. Separately, backend generates event signup QR code using Python `qrcode` library (pointing to `{domain}/events/{id}/signup`)
@@ -316,59 +325,44 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Root["/"] --> Welcome["/ (Welcome)"]
-    Root --> About["/about"]
+    Root["/"] --> Welcome["/welcome (redirect from /)"]
     Root --> Login["/login"]
     Root --> Signup["/signup"]
-    Root --> Onboarding["/onboarding"]
     Root --> Dashboard["/dashboard"]
     Root --> Profile["/profile"]
     Root --> Events["/events"]
     Events --> EventsList["/events (listing)"]
     Events --> EventCreate["/events/create"]
     Events --> EventDetail["/events/:id"]
+    Events --> EventEdit["/events/:id/edit"]
     Events --> EventManage["/events/:id/manage"]
-    Events --> EventSignup["/events/:id/signup"]
-    Events --> EventFlyer["/events/:id/flyer"]
-    Root --> History["/events/history"]
     Root --> Leaderboard["/community/leaders"]
-    Root --> Heatmap["/community/heatmap"]
     Root --> AdminPanel["/admin"]
-    AdminPanel --> AdminUsers["/admin/users"]
-    AdminPanel --> AdminEvents["/admin/events"]
-    AdminPanel --> AdminAnalytics["/admin/analytics"]
 ```
 
 
 
 ### Public Routes (no auth required)
 
-- `/` -- Welcome/landing page
-- `/about` -- About Lemontree
+- `/` -- Redirects to `/welcome`
+- `/welcome` -- Welcome/landing page
 - `/login` -- Login
 - `/signup` -- Signup
-- `/events/:id/signup` -- Event signup landing (QR code destination)
+- `/events` -- Browse upcoming public events
+- `/events/:id` -- Event detail (signup integrated here; no separate signup landing)
 - `/community/leaders` -- Public leaderboard
-- `/community/heatmap` -- Public heatmap
 
 ### Authenticated Routes
 
-- `/onboarding` -- Post-signup onboarding form
 - `/dashboard` -- Main dashboard
 - `/profile` -- User profile (view + edit)
-- `/events` -- Browse upcoming public events
 - `/events/create` -- Create new event
-- `/events/:id` -- Event detail
-- `/events/:id/manage` -- Event management (leader only)
-- `/events/:id/flyer` -- Flyer preview/edit (leader only)
-- `/events/history` -- Past events
+- `/events/:id/edit` -- Edit event (leader only)
+- `/events/:id/manage` -- Event management (leader only; flyer download, signups, check-in)
 
 ### Admin Routes
 
-- `/admin` -- Admin dashboard
-- `/admin/users` -- User management
-- `/admin/events` -- All events oversight
-- `/admin/analytics` -- Platform analytics
+- `/admin` -- Admin dashboard (signups, analytics, CSV export)
 
 ---
 
@@ -592,7 +586,7 @@ flowchart TD
 | name                 | VARCHAR(255)                                                       | Yes      |                                           |
 | phone                | VARCHAR(20)                                                        | No       |                                           |
 | avatar_url           | TEXT                                                               | No       |                                           |
-| role                 | ENUM('volunteer','admin')                                          | Yes      | Default: 'volunteer'                      |
+| role                 | ENUM('volunteer','leader','promoter','admin')                       | Yes      | Default: 'volunteer'                      |
 | category             | ENUM('corporate','leadership_group','student','community','other') | No       |                                           |
 | location_name        | VARCHAR(255)                                                       | No       | Human-readable location                   |
 | latitude             | DECIMAL(10,8)                                                      | No       |                                           |
@@ -632,7 +626,7 @@ flowchart TD
 | pantry_mode          | ENUM('none','nearby_resources','single_resource')         | Yes      | Default: 'none'            |
 | resource_count       | INTEGER                                                   | No       | For nearby_resources mode  |
 | resource_id          | VARCHAR(255)                                              | No       | Lemontree API resource ID for single_resource mode |
-| flyer_language       | VARCHAR(10)                                               | Yes      | Default: 'en'              |
+| flyer_language       | VARCHAR(10)                                               | Yes      | Default: 'en'; supports en, es, fr, pt, it, pl, ht, tl |
 | flyer_url            | TEXT                                                      | No       | URL to generated flyer PDF |
 | shareable_link       | VARCHAR(255)                                              | Yes      | Unique short link or slug  |
 | created_at           | TIMESTAMPTZ                                               | Yes      |                            |
@@ -784,29 +778,18 @@ flowchart TD
 
 ## 9. API Design
 
+> **Base prefix:** All API routes use `/api/v1` (e.g. `/api/v1/auth/login`).
+
 ### Auth Endpoints
 
 
 | Method | Route                       | Purpose        | Auth | Request                   | Response                              |
 | ------ | --------------------------- | -------------- | ---- | ------------------------- | ------------------------------------- |
-| POST   | `/api/auth/signup`          | Email signup   | No   | `{email, password, name}` | `{user, access_token, refresh_token}` |
-| POST   | `/api/auth/login`           | Email login    | No   | `{email, password}`       | `{user, access_token, refresh_token}` |
-| POST   | `/api/auth/google`          | Google OAuth   | No   | `{google_token}`          | `{user, access_token, refresh_token}` |
-| POST   | `/api/auth/refresh`         | Refresh token  | No   | `{refresh_token}`         | `{access_token, refresh_token}`       |
-| POST   | `/api/auth/logout`          | Logout         | Yes  | --                        | `{success}`                           |
-| POST   | `/api/auth/forgot-password` | Password reset | No   | `{email}`                 | `{success}`                           |
-
-
-### User Endpoints
-
-
-| Method | Route                      | Purpose                   | Auth | Request                                            | Response                                         |
-| ------ | -------------------------- | ------------------------- | ---- | -------------------------------------------------- | ------------------------------------------------ |
-| GET    | `/api/users/me`            | Get current user          | Yes  | --                                                 | `{user}`                                         |
-| PUT    | `/api/users/me`            | Update profile            | Yes  | `{name, phone, ...}`                               | `{user}`                                         |
-| PUT    | `/api/users/me/onboarding` | Complete onboarding       | Yes  | `{category, location, languages, referral_source}` | `{user}`                                         |
-| GET    | `/api/users/:id`           | Get user profile (public) | No   | --                                                 | `{user_public}`                                  |
-| GET    | `/api/users/me/stats`      | Get user stats            | Yes  | --                                                 | `{events_created, events_attended, points, ...}` |
+| POST   | `/api/v1/auth/signup`       | Email signup   | No   | `{name, email, password, role, ...}` | `{message, user_id}` |
+| POST   | `/api/v1/auth/login`        | Email login    | No   | `{email, password}`       | `{access_token, refresh_token}`       |
+| POST   | `/api/v1/auth/refresh`      | Refresh token  | No   | `{refresh_token}`         | `{access_token, refresh_token}`       |
+| GET    | `/api/v1/auth/me`           | Get current user | Yes  | --                        | `{id, name, email, role}`              |
+| POST   | `/api/v1/auth/logout`       | Logout         | Yes  | Bearer token              | `{message}`                           |
 
 
 ### Event Endpoints
@@ -814,28 +797,28 @@ flowchart TD
 
 | Method | Route                             | Purpose                 | Auth         | Request                                                                                                                                                              | Response                                         |
 | ------ | --------------------------------- | ----------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| POST   | `/api/events`                     | Create event            | Yes          | `{title, description, date, start_time, end_time, location_name, lat, lng, volunteer_limit, visibility, pantry_mode, pantry_count, pantry_venue_id, flyer_language}` | `{event}`                                        |
-| GET    | `/api/events`                     | List public events      | No           | Query: `?page, limit, date_from, date_to, lat, lng, radius, status`                                                                                                  | `{events[], total, page}`                        |
-| GET    | `/api/events/:id`                 | Get event detail        | No*          | --                                                                                                                                                                   | `{event, signup_count, is_signed_up, flyer_url}` |
-| PUT    | `/api/events/:id`                 | Update event            | Yes (leader) | `{...fields}`                                                                                                                                                        | `{event}`                                        |
-| DELETE | `/api/events/:id`                 | Cancel/delete event     | Yes (leader) | --                                                                                                                                                                   | `{success}`                                      |
-| GET    | `/api/events/my/created`          | My created events       | Yes          | Query: `?status`                                                                                                                                                     | `{events[]}`                                     |
-| GET    | `/api/events/my/joined`           | My joined events        | Yes          | Query: `?status`                                                                                                                                                     | `{events[]}`                                     |
-| GET    | `/api/events/:id/nearby-resources`| Get resources near event (proxies Lemontree API) | No | Query: `?take, resourceTypeId` | `{resources[], count}` |
+| POST   | `/api/v1/events`                  | Create event            | Yes          | `{title, description, date, start_time, end_time, location_name?, lat?, lng?, volunteer_limit?, visibility, pantry_mode, resource_id?, flyer_language}` | `{event}`                                        |
+| GET    | `/api/v1/events`                  | List public events      | No           | Query: `?page, limit, date_from, date_to, status`                                                                                                                    | `{events[]}`                                     |
+| GET    | `/api/v1/events/share/{token}`    | Get event by share token | No          | --                                                                                                                                                                   | `{event}` (for private events via share link)    |
+| GET    | `/api/v1/events/{id}`             | Get event detail        | No           | --                                                                                                                                                                   | `{event}`                                        |
+| PUT    | `/api/v1/events/{id}`             | Update event            | Yes (leader) | `{...fields}`                                                                                                                                                        | `{event}`                                        |
+| DELETE | `/api/v1/events/{id}`             | Cancel event            | Yes (leader) | --                                                                                                                                                                   | `{success}`                                      |
+| GET    | `/api/v1/events/my/created`       | My created events       | Yes          | Query: `?status`                                                                                                                                                     | `{events[]}`                                     |
+| GET    | `/api/v1/events/my/joined`        | My joined events        | Yes          | Query: `?status`                                                                                                                                                     | `{events[]}`                                     |
+| GET    | `/api/v1/events/{id}/nearby-resources` | Get resources near event (proxies Lemontree API) | No | Query: `?count` | Lemontree API response |
 
-
-*Private events require auth + signup or leader status
 
 ### Signup Endpoints
 
 
 | Method | Route                                | Purpose                          | Auth         | Request                                | Response         |
 | ------ | ------------------------------------ | -------------------------------- | ------------ | -------------------------------------- | ---------------- |
-| POST   | `/api/events/:id/signup`             | Signup for event (authenticated) | Yes          | `{referral_code?}`                     | `{signup}`       |
-| POST   | `/api/events/:id/guest-signup`       | Guest signup                     | No           | `{name, email, phone, referral_code?}` | `{guest_signup}` |
-| DELETE | `/api/events/:id/signup`             | Cancel signup                    | Yes          | --                                     | `{success}`      |
-| GET    | `/api/events/:id/signups`            | List signups (leader)            | Yes (leader) | --                                     | `{signups[]}`    |
-| PUT    | `/api/events/:id/signups/:signup_id` | Update attendance                | Yes (leader) | `{status}`                             | `{signup}`       |
+| POST   | `/api/v1/events/{id}/signup`        | Signup for event (authenticated) | Yes          | `{referral_code?}`                     | `{signup}`       |
+| POST   | `/api/v1/events/{id}/guest-signup`   | Guest signup                     | No           | `{name, email, phone?, referral_code?}` | `{signup}`       |
+| DELETE | `/api/v1/events/{id}/signup`        | Cancel signup                    | Yes          | --                                     | `{success}`      |
+| GET    | `/api/v1/events/{id}/signups`        | List signups (leader)            | Yes (leader) | --                                     | `{signups[]}` with name, email |
+| PATCH  | `/api/v1/events/{id}/signups/{sid}/check-in`   | Mark attended | Yes (leader) | --                                     | `{signup}`       |
+| PATCH  | `/api/v1/events/{id}/signups/{sid}/uncheck-in` | Undo check-in  | Yes (leader) | --                                     | `{signup}`       |
 
 
 ### Flyer Endpoints
@@ -843,19 +826,20 @@ flowchart TD
 
 | Method | Route                            | Purpose                   | Auth         | Request                     | Response                    |
 | ------ | -------------------------------- | ------------------------- | ------------ | --------------------------- | --------------------------- |
-| POST   | `/api/events/:id/flyer/generate` | Fetch flyer PDF from Lemontree API and cache in Supabase Storage | Yes (leader) | `{language?, location_name?}` | `{flyer_url, resources_found}` |
-| GET    | `/api/events/:id/flyer`          | Get cached flyer info     | No           | --                          | `{flyer_url, generated_at, language, resources_found}` |
-| GET    | `/api/events/:id/flyer/preview`  | Stream flyer PDF directly from Lemontree API (no caching) | Yes (leader) | Query: `?language, sample` | `application/pdf` stream |
-
-### Resource Proxy Endpoints (Lemontree Data API)
+| GET    | `/api/v1/flyer/{event_id}`       | Generate and stream flyer PDF | Yes        | Query: `?lang` (en, es, fr, pt, it, pl, ht, tl) | `application/pdf` stream    |
 
 
-| Method | Route                              | Purpose                                   | Auth | Request                                         | Response                                     |
-| ------ | ---------------------------------- | ----------------------------------------- | ---- | ----------------------------------------------- | -------------------------------------------- |
-| GET    | `/api/resources/nearby`            | Proxy: nearby food resources              | No   | Query: `?lat, lng, take, resourceTypeId, text`  | `{resources[], count, cursor}`               |
-| GET    | `/api/resources/:id`               | Proxy: single resource detail             | No   | --                                              | `{resource}`                                 |
-| GET    | `/api/resources/markers`           | Proxy: map markers in bounding box        | No   | Query: `?sw_lat, sw_lng, ne_lat, ne_lng`        | GeoJSON FeatureCollection                    |
-| GET    | `/api/resources/search`            | Proxy: search resources by name or zip    | No   | Query: `?text, location, lat, lng`              | `{resources[], count, cursor}`               |
+### Map Endpoints
+
+
+| Method | Route              | Purpose                | Auth | Request                              | Response        |
+| ------ | ------------------ | ---------------------- | ---- | ------------------------------------ | --------------- |
+| GET    | `/api/v1/map`      | Proxy OSM map tile     | No   | Query: `?lat, lon, zoom, width, height` | PNG image       |
+
+
+### Resource Data (Frontend → Lemontree API directly)
+
+The frontend calls the Lemontree Data API (`platform.foodhelpline.org`) directly for `markersWithinBounds` and resource details. No backend resource proxy for these.
 
 
 ### Messaging Endpoints
@@ -863,8 +847,8 @@ flowchart TD
 
 | Method | Route                      | Purpose                    | Auth         | Request                   | Response       |
 | ------ | -------------------------- | -------------------------- | ------------ | ------------------------- | -------------- |
-| POST   | `/api/events/:id/messages` | Send message to volunteers | Yes (leader) | `{content, message_type}` | `{message}`    |
-| GET    | `/api/events/:id/messages` | Get event messages         | Yes (member) | --                        | `{messages[]}` |
+| POST   | `/api/v1/events/{id}/messages` | Send message to volunteers | Yes (leader) | `{content, message_type}` | `{message}`    |
+| GET    | `/api/v1/events/{id}/messages` | Get event messages         | Yes (member) | --                        | `{messages[]}` |
 
 
 ### Photo Endpoints
@@ -872,17 +856,17 @@ flowchart TD
 
 | Method | Route                    | Purpose          | Auth | Request                      | Response     |
 | ------ | ------------------------ | ---------------- | ---- | ---------------------------- | ------------ |
-| POST   | `/api/events/:id/photos` | Upload photo     | Yes  | multipart: `{file, caption}` | `{photo}`    |
-| GET    | `/api/events/:id/photos` | Get event photos | No   | --                           | `{photos[]}` |
+| POST   | `/api/v1/events/{id}/photos` | Upload photo     | Yes  | multipart: `{file, caption}` | `{photo}`    |
+| GET    | `/api/v1/events/{id}/photos` | Get event photos | No   | --                           | `{photos[]}` |
 
 
-### Points + Leaderboard Endpoints (Post-MVP)
+### Points + Leaderboard Endpoints (Implemented)
 
 
 | Method | Route              | Purpose         | Auth | Request                           | Response                  |
 | ------ | ------------------ | --------------- | ---- | --------------------------------- | ------------------------- |
-| GET    | `/api/points/me`   | Get my points   | Yes  | --                                | `{total, transactions[]}` |
-| GET    | `/api/leaderboard` | Get leaderboard | No   | Query: `?period, category, limit` | `{leaders[]}`             |
+| GET    | `/api/v1/points/me`   | Get my points   | Yes  | --                                | `{total_points, transactions[]}` |
+| GET    | `/api/v1/leaderboard` | Get leaderboard | No   | Query: `?limit, category`         | `{leaders[]}` with rank   |
 
 
 ### Heatmap Endpoints (Post-MVP)
@@ -898,11 +882,10 @@ flowchart TD
 
 | Method | Route                       | Purpose            | Auth        | Request                | Response                           |
 | ------ | --------------------------- | ------------------ | ----------- | ---------------------- | ---------------------------------- |
-| GET    | `/api/admin/users`          | List all users     | Yes (admin) | Query: `?page, search` | `{users[], total}`                 |
-| PUT    | `/api/admin/users/:id/role` | Change user role   | Yes (admin) | `{role}`               | `{user}`                           |
-| GET    | `/api/admin/events`         | List all events    | Yes (admin) | Query: `?page, status` | `{events[], total}`                |
-| GET    | `/api/admin/analytics`      | Platform analytics | Yes (admin) | --                     | `{total_users, total_events, ...}` |
-| DELETE | `/api/admin/events/:id`     | Force delete event | Yes (admin) | --                     | `{success}`                        |
+| GET    | `/admin/signups`            | List/filter signups | Yes (admin) | Query: `?page, limit, event_id, status` | `{signups[], total}`     |
+| PATCH  | `/admin/signups/{id}/status` | Update signup status | Yes (admin) | `{status}`             | `{signup}`                         |
+| GET    | `/admin/signups/export`     | CSV export         | Yes (admin) | Query params           | CSV file                           |
+| GET    | `/admin/analytics`          | Platform analytics | Yes (admin) | --                     | `{...}`                            |
 
 
 ---
@@ -1032,52 +1015,54 @@ flowchart TB
     subgraph frontend ["Frontend (Next.js on Vercel)"]
         NextApp["Next.js App Router"]
         Pages["Pages + Components"]
-        TailwindUI["Tailwind + shadcn/ui"]
-        MapboxSDK["Mapbox GL JS"]
+        TailwindUI["Tailwind + Lemontree design system"]
+        MapLibreSDK["MapLibre GL JS"]
         NextApp --> Pages
         Pages --> TailwindUI
-        Pages --> MapboxSDK
+        Pages --> MapLibreSDK
     end
 
-    subgraph backend ["Backend (FastAPI on Vercel/Railway)"]
+    subgraph backend ["Backend (FastAPI on Railway)"]
         FastAPI["FastAPI App"]
-        AuthModule["Auth Module (JWT)"]
+        AuthModule["Auth Module (Supabase Auth)"]
         EventModule["Event CRUD"]
         SignupModule["Signup Logic"]
-        FlyerModule["Flyer Service"]
-        ResourceModule["Resource Proxy"]
+        FlyerModule["Flyer Service (WeasyPrint)"]
+        MapModule["Map Tile Proxy"]
         PointsModule["Points Engine"]
+        AdminModule["Admin API"]
         FastAPI --> AuthModule
         FastAPI --> EventModule
         FastAPI --> SignupModule
         FastAPI --> FlyerModule
-        FastAPI --> ResourceModule
+        FastAPI --> MapModule
         FastAPI --> PointsModule
+        FastAPI --> AdminModule
     end
 
     subgraph database ["Database (Supabase)"]
         SupabasePostgres["Postgres DB"]
         SupabaseAuth["Supabase Auth"]
-        SupabaseStorage["Supabase Storage (flyers, photos)"]
+        SupabaseStorage["Supabase Storage (photos)"]
     end
 
     subgraph external ["External Services"]
-        GoogleOAuth["Google OAuth"]
-        MapboxAPI["Mapbox Geocoding API"]
         LemontreeAPI["Lemontree Data API (platform.foodhelpline.org)"]
+        OSM["OpenStreetMap / CartoDB tiles"]
+        Nominatim["Nominatim (reverse geocoding)"]
         QRGen["QR Code Library (qrcode)"]
     end
 
-    NextApp -->|"REST API calls"| FastAPI
-    AuthModule -->|"Verify Google token"| GoogleOAuth
-    AuthModule -->|"Issue/verify JWT"| SupabaseAuth
+    NextApp -->|"REST API /api/v1/*"| FastAPI
+    AuthModule -->|"Email/password, JWT"| SupabaseAuth
     EventModule --> SupabasePostgres
     SignupModule --> SupabasePostgres
-    ResourceModule -->|"GET /api/resources\nGET /api/resources/markersWithinBounds"| LemontreeAPI
-    FlyerModule -->|"GET /api/resources.pdf"| LemontreeAPI
-    FlyerModule -->|"Cache flyer PDFs"| SupabaseStorage
+    FlyerModule -->|"markersWithinBounds"| LemontreeAPI
+    FlyerModule -->|"Jinja2 + WeasyPrint"| FlyerModule
+    FlyerModule --> Nominatim
     FlyerModule --> QRGen
-    Pages -->|"Map rendering"| MapboxAPI
+    MapModule --> OSM
+    Pages -->|"Direct API calls"| LemontreeAPI
     PointsModule --> SupabasePostgres
 ```
 
@@ -1089,68 +1074,68 @@ flowchart TB
 
 - Server-side rendering for public pages (SEO for events, landing)
 - Client-side interactivity for forms, maps, dashboards
-- JWT token management (httpOnly cookies or localStorage)
-- Mapbox GL JS for map rendering
-- PDF preview via iframe/embed
+- JWT token management (localStorage with refresh flow)
+- **MapLibre GL JS** for map rendering (react-map-gl/maplibre)
+- Direct calls to Lemontree Data API for `markersWithinBounds` and resource details
+- PDF flyer download via backend `/api/v1/flyer/{event_id}`
 
 **Backend (FastAPI):**
 
-- REST API for all business logic
-- JWT-based authentication (issue + verify tokens)
-- Google OAuth token verification
+- REST API under `/api/v1` prefix for all business logic
+- Supabase Auth for email/password signup, login, refresh; JWT verification via `supabase_jwt_secret`
 - Event CRUD with authorization checks
-- **Lemontree Data API proxy** -- resource search, nearby resources, map markers
-- **Flyer service** -- fetches PDF from Lemontree API (`/api/resources.pdf`), caches in Supabase Storage
-- Event signup QR code generation (Python `qrcode` library)
-- File upload handling -> Supabase Storage
-- Points calculation and attribution
-- Heatmap data aggregation
+- **Flyer service** -- custom Jinja2 HTML template + WeasyPrint PDF generation (not Lemontree `/api/resources.pdf`)
+  - Fetches nearby markers from Lemontree `markersWithinBounds`
+  - Renders static map via `staticmap` + CartoDB tiles
+  - Reverse geocoding via Nominatim
+  - Event signup QR code (Python `qrcode` library)
+  - Supports 8 languages: en, es, fr, pt, it, pl, ht, tl
+- **Map tile proxy** (`/api/v1/map`) -- proxies OpenStreetMap tiles for static map rendering
+- Event nearby-resources proxy (`/api/events/:id/nearby-resources`) to Lemontree API
+- Points calculation and attribution (award on event completion, check-in)
+- Admin API for signup management, CSV export, analytics
 
 **Database (Supabase Postgres):**
 
 - All relational data storage
-- Row Level Security (RLS) as defense-in-depth (primary auth in FastAPI)
-- Supabase Auth for Google OAuth provider management
-- Supabase Storage for flyers and photos
+- Supabase Auth for email/password (no Google OAuth in current implementation)
+- Supabase Storage for event photos (flyers generated on-demand, not cached)
 
 ### Key Flows
 
 **Auth Flow:**
 
-1. User clicks "Sign in with Google" -> frontend gets Google token
-2. Frontend sends Google token to `POST /api/auth/google`
-3. Backend verifies with Google, creates/finds user, issues JWT
-4. JWT stored in httpOnly cookie, sent with every API request
+1. User signs up via `POST /api/v1/auth/signup` (email, password, name, role, etc.) or logs in via `POST /api/v1/auth/login`
+2. Supabase Auth handles signup/login; backend returns `access_token` and `refresh_token`
+3. Frontend stores tokens in localStorage; sends `Authorization: Bearer {token}` with API requests
+4. On 401, frontend calls `POST /api/v1/auth/refresh` with refresh_token to obtain new access_token
+5. No Google OAuth in current implementation
 
-**Flyer Generation Flow (via Lemontree Data API):**
+**Flyer Generation Flow (custom WeasyPrint pipeline):**
 
-1. Event created -> backend auto-triggers flyer fetch
-2. Backend calls `GET https://platform.foodhelpline.org/api/resources.pdf?lat={event.lat}&lng={event.lng}&locationName={event.location_name}&flyerLang={event.flyer_language}&ref={event.id}`
-3. If 200: PDF stream saved to Supabase Storage bucket `flyers/{event_id}/flyer-{lang}.pdf`
-4. If 422 (out of service area): event flagged, leader notified -- no flyer available
-5. Flyer URL saved to `events.flyer_url`
-6. Separately: QR code generated pointing to `{domain}/events/{id}/signup` for volunteer recruitment
+1. Leader requests flyer via `GET /api/v1/flyer/{event_id}?lang={en|es|fr|pt|it|pl|ht|tl}`
+2. Backend fetches event, validates lat/lng
+3. Fetches nearby food resource markers from Lemontree `markersWithinBounds`
+4. Renders static map image (CartoDB tiles + event pin + resource markers) via `staticmap`
+5. Reverse geocodes location via Nominatim
+6. Generates event signup QR code (points to `{frontend_url}{shareable_link}`)
+7. Renders Jinja2 HTML template with event details, map, QR, logos
+8. Converts to PDF via WeasyPrint and returns `application/pdf` response
+9. Flyers are generated on-demand; no Supabase Storage caching
 
 **QR / Share Link Flow:**
 
-Two distinct QR flows exist:
-
 *Event Signup QR (generated by our platform):*
-1. QR code encodes `{domain}/events/{id}/signup?ref={referral_code}`
-2. Scanning opens public signup landing page for recruiting volunteers
-3. Page shows event info + signup options (login / guest)
-4. Guest signup creates `guest_signups` record + `event_signups` record
-5. Referral code tracked for points attribution
-
-*Resource Flyer QR (generated by Lemontree API):*
-1. QR code on the PDF flyer encodes `foodhelpline.org/locations/{lat},{lng}` with UTM params
-2. Community members scan it to find nearby food resources on foodhelpline.org
-3. `ref` param passed during flyer generation enables attribution tracking back to the event
+1. Each event has a `shareable_link` (e.g. `/events/abc123def4` — 10-char hex token)
+2. Event can be resolved by UUID (`GET /api/v1/events/{id}`) or share token (`GET /api/v1/events/share/{token}`)
+3. QR code on flyer encodes `{frontend_url}{shareable_link}` (event detail page; signup from there)
+4. Signup happens on event detail page: authenticated users via `POST /api/v1/events/{id}/signup`, guests via `POST /api/v1/events/{id}/guest-signup`
+5. No dedicated `/events/:id/signup` landing page — signup is integrated into event detail
 
 **Post-Event Photo Flow:**
 
 1. Leader or attendee uploads photo via event management page
-2. Frontend sends multipart form to `POST /api/events/:id/photos`
+2. Frontend sends multipart form to `POST /api/v1/events/:id/photos`
 3. Backend validates auth + event membership
 4. File uploaded to Supabase Storage bucket `event-photos/{event_id}/`
 5. Record created in `event_photos` table
@@ -1160,14 +1145,16 @@ Two distinct QR flows exist:
 
 | Service                 | Purpose             | Free Tier         | Notes                        |
 | ----------------------- | ------------------- | ----------------- | ---------------------------- |
-| Supabase                | DB + Auth + Storage | Yes (generous)    | Primary infrastructure       |
-| Mapbox                  | Maps + Geocoding    | 50k loads/mo free | Location picker + event maps |
-| Google OAuth            | Authentication      | Free              | Primary login method         |
-| **Lemontree Data API**  | **Food resource data + Flyer PDF** | **Free (public)** | **`platform.foodhelpline.org` -- no auth, CORS-enabled. Replaces manual pantry seeding and custom flyer generation** |
+| Supabase                | DB + Auth + Storage | Yes (generous)    | Primary infrastructure; email/password auth |
+| **Lemontree Data API**  | **Food resource data, markers** | **Free (public)** | **`platform.foodhelpline.org` — markersWithinBounds, /api/resources; frontend calls directly** |
+| MapLibre GL            | Map rendering       | Free (OSS)        | react-map-gl/maplibre for event maps |
+| OpenStreetMap / CartoDB| Map tiles           | Free              | Backend staticmap, frontend basemaps |
+| Nominatim               | Reverse geocoding   | Free              | Address from lat/lng for flyer |
+| WeasyPrint              | PDF generation      | Free (OSS)        | Custom flyer PDF from Jinja2 HTML |
 | qrcode (Python lib)     | QR code generation  | Free (OSS)        | Event signup QR codes        |
-| superjson (npm)         | Lemontree API response parsing | Free (OSS) | Deserializes Date fields from API responses |
+| staticmap (Python)      | Static map images   | Free (OSS)        | Flyer map rendering          |
 | Vercel                  | Frontend hosting    | Free tier         | Next.js deployment           |
-| Railway/Render          | Backend hosting     | Free tier         | FastAPI deployment           |
+| Railway                 | Backend hosting     | Free tier         | FastAPI deployment           |
 
 
 ---
@@ -1207,16 +1194,18 @@ Two distinct QR flows exist:
 
 ### Flyer Generation: Lemontree API vs Custom Pipeline
 
-**Decision: Use Lemontree API's `/api/resources.pdf` endpoint**
+**Implementation: Custom Jinja2 + WeasyPrint pipeline (not Lemontree `/api/resources.pdf`)**
 
-- The Lemontree API generates branded flyer PDFs showing nearby food resources with a QR code to foodhelpline.org
-- **Eliminates need for weasyprint, custom HTML templates, and PDF rendering** -- massive complexity reduction
-- Supports English and Spanish (`flyerLang` param), location names, referral tracking, and sample previews
-- Our platform fetches the PDF, caches it in Supabase Storage, and serves it to users
-- Event signup QR codes (for volunteer recruitment) are generated separately using Python `qrcode` library
-- 422 response when out of service area is handled gracefully (no flyer available for that location)
-- For MVP: synchronous fetch on event creation. The API call + storage upload takes <3 seconds.
-- **Key insight:** There are two distinct documents -- (1) resource flyer for community members (from API) and (2) event signup QR for volunteer recruitment (generated locally)
+- The platform uses a **custom flyer** generated server-side:
+  - Jinja2 HTML template with Lemontree branding (logo SVG, design tokens)
+  - WeasyPrint converts HTML to PDF
+  - Nearby food resource markers from Lemontree `markersWithinBounds` API
+  - Static map image via `staticmap` + CartoDB tiles (event pin + pantry/kitchen markers)
+  - Reverse geocoding via Nominatim for address display
+  - Event signup QR code (Python `qrcode` library) pointing to `{frontend_url}{shareable_link}`
+- Supports **8 languages**: en, es, fr, pt, it, pl, ht, tl
+- Flyers are generated **on-demand** via `GET /api/v1/flyer/{event_id}?lang=...`; no Supabase Storage caching
+- **Alternative (from original plan):** Lemontree API's `/api/resources.pdf` could be used for community-facing resource flyers; current implementation focuses on volunteer recruitment flyers with event details
 
 ### Guest Signups
 

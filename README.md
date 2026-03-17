@@ -63,20 +63,27 @@ The app will be available at **http://localhost:3000**
 ## Project Structure
 
 ```
-MS-CodeToGive-TEAM3/
-├── frontend/            # Next.js app (TypeScript, Tailwind)
+morgan-stanley/
+├── frontend/            # Next.js app (TypeScript, Tailwind, MapLibre)
 │   └── app/
-│       ├── login/       # Login page
-│       ├── signup/      # Signup page
-│       ├── components/  # Shared UI components
-│       └── styles/      # Lemontree design system
+│       ├── welcome/     # Landing page
+│       ├── login/      # Login page
+│       ├── signup/     # Signup page
+│       ├── dashboard/  # Dashboard
+│       ├── profile/    # User profile
+│       ├── events/     # Event listing, create, detail, edit, manage
+│       ├── community/leaders/  # Leaderboard
+│       ├── admin/      # Admin dashboard
+│       ├── components/ # Shared UI components
+│       └── styles/     # Lemontree design system
 ├── backend/             # FastAPI app (Python)
 │   └── app/
-│       ├── main.py      # App entry point + middleware
-│       ├── core/        # Config, auth, Supabase clients
-│       └── api/routes/  # auth, events, signups, flyer, admin
+│       ├── main.py     # App entry point + middleware
+│       ├── core/       # Config, auth, Supabase, points
+│       ├── api/routes/ # auth, events, signups, flyer, map, photos, messages, points, admin
+│       └── templates/  # Jinja2 flyer template
 ├── assets/              # SVG logos
 ├── docs/
-│   └── BUILD_PLAN.md    # Full architecture and implementation plan
-└── .env.example         # Environment variable template
+│   └── BUILD_PLAN.md   # Full architecture and implementation plan
+└── .env.example        # Environment variable template
 ```
